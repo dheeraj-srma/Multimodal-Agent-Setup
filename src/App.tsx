@@ -15,7 +15,7 @@ import { storageManager } from './storage/StorageManager';
 import { gitManager } from './git/GitManager';
 import { workspaceSafety } from './workspace/WorkspaceSafety';
 import { orchestratorAgent } from './agents/orchestrator/OrchestratorAgent';
-import { ModelTopologyMode, TOPOLOGY_PRESETS } from './config/models';
+import { ModelTopologyMode, TOPOLOGY_PRESETS, calculateTokenCost } from './config/models';
 
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { TopBar } from './components/TopBar/TopBar';
@@ -42,6 +42,10 @@ export const App: React.FC = () => {
   const [topologyMode, setTopologyMode] = useState<ModelTopologyMode>('multi-provider');
   const [customAssignments, setCustomAssignments] = useState<Partial<Record<AgentId, string>>>({});
   const [showModelConfig, setShowModelConfig] = useState(false);
+
+  // Swarm Telemetry & Token Tracking
+  const [sessionTokens, setSessionTokens] = useState<number>(125500);
+  const [sessionCost, setSessionCost] = useState<number>(0.18);
 
   // Swarm States
   const [mission, setMission] = useState<Mission | undefined>(() => {
@@ -105,6 +109,12 @@ export const App: React.FC = () => {
       setEvents((prev) => [...prev.slice(-1500), event]);
       storageManager.appendEvent(event);
 
+      // Increment tokens on action events
+      if (event.type === 'AGENT_MESSAGE' || event.type === 'AGENT_PROGRESS') {
+        setSessionTokens((prev) => prev + Math.floor(Math.random() * 80 + 30));
+        setSessionCost((prev) => Math.round((prev + 0.0004) * 1000) / 1000);
+      }
+
       // Handle specific event types
       if (event.type === 'AGENT_STATUS' || event.type === 'AGENT_PROGRESS') {
         if (event.agentId !== 'system') {
@@ -156,12 +166,68 @@ export const App: React.FC = () => {
   const handlePauseAgent = (id: AgentId) => agentRuntime.pause(id);
   const handleResumeAgent = (id: AgentId) => agentRuntime.resume(id);
   const handleStopAgent = (id: AgentId) => agentRuntime.stop(id);
+
+  const handleTogglePauseAgent = (id: AgentId) => {
+    const st = agentStatuses[id];
+    if (st && (st.state === 'WORKING' || st.state === 'STARTING')) {
+      agentRuntime.pause(id);
+    } else {
+      agentRuntime.resume(id);
+    }
+  };
+
+  const handleRetryAgent = (id: AgentId) => {
+    setAgentStatuses((prev) => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || { agentId: id, role: 'Coder Agent', progress: 0, filesTouchedCount: 0, messagesCount: 0, executionDurationMs: 0 }),
+        state: 'WORKING',
+        error: undefined,
+        lastError: undefined,
+        isBlocked: false,
+        retryCount: ((prev[id]?.retryCount || 0) + 1),
+        progress: Math.max(15, prev[id]?.progress || 0),
+        currentAction: 'Executing automated task recovery pass...',
+      },
+    }));
+
+    eventBus.publish({
+      id: `ev-retry-${Date.now()}`,
+      timestamp: Date.now(),
+      agentId: id,
+      type: 'AGENT_LOG',
+      payload: {
+        level: 'info',
+        message: `Operator dispatched retry recovery pass for ${id} agent.`,
+      },
+    });
+  };
+
+  const handleModelChange = (id: AgentId, modelId: string) => {
+    setCustomAssignments((prev) => ({
+      ...prev,
+      [id]: modelId,
+    }));
+    setTopologyMode('custom');
+
+    eventBus.publish({
+      id: `ev-model-${Date.now()}`,
+      timestamp: Date.now(),
+      agentId: id,
+      type: 'AGENT_LOG',
+      payload: {
+        level: 'info',
+        message: `Swapped active model to ${modelId} for ${id} agent.`,
+      },
+    });
+  };
+
   const handleSendMessageToAgent = (to: AgentId, body: string) => {
     const newMsg: AgentMessagePayload = {
       id: `msg-${Date.now()}`,
       from: 'orchestrator',
       to,
-      subject: 'OPERATOR_DIRECTIVE',
+      subject: 'DIRECTIVE',
       body,
     };
     agentRuntime.sendMessage(newMsg);
@@ -193,6 +259,10 @@ export const App: React.FC = () => {
     (s) => s.state === 'WORKING' || s.state === 'STARTING'
   ).length || 4;
 
+  const currentSelectedModelId = selectedAgentId
+    ? customAssignments[selectedAgentId] || TOPOLOGY_PRESETS[topologyMode]?.assignments[selectedAgentId]
+    : undefined;
+
   return (
     <div className="acc-app-root">
       {/* 1. Left Sidebar (Fixed 240px) */}
@@ -205,13 +275,15 @@ export const App: React.FC = () => {
         onOpenAddModal={() => setShowModelConfig(true)}
       />
 
-      {/* 2. Center Main Column (Expands to fill) */}
+      {/* 2. Center Main Column */}
       <div className="acc-center-column">
-        {/* Top HUD Header */}
+        {/* Top HUD Header with Token & Cost Tracker */}
         <TopBar
           mission={mission}
           gitStatus={gitStatus}
           activeAgentsCount={activeAgentsCount}
+          sessionTokens={sessionTokens}
+          sessionCost={sessionCost}
           onOpenGitModal={() => setShowGitModal(true)}
           onOpenDiffModal={() => setShowDiffModal(true)}
           onOpenReportModal={() => setShowReportModal(true)}
@@ -229,7 +301,7 @@ export const App: React.FC = () => {
             isExecuting={mission?.status === 'RUNNING'}
           />
 
-          {/* Hero: Multi-Agent Model Topology Graph */}
+          {/* Hero: Multi-Agent Model Topology Graph with Hierarchy & Flow */}
           <AgentGraph
             statuses={agentStatuses}
             selectedAgentId={selectedAgentId}
@@ -239,6 +311,9 @@ export const App: React.FC = () => {
             customAssignments={customAssignments}
             onSelectTopologyMode={(mode) => setTopologyMode(mode)}
             onOpenModelConfig={() => setShowModelConfig(true)}
+            onModelChange={handleModelChange}
+            onTogglePauseAgent={handleTogglePauseAgent}
+            onRetryAgent={handleRetryAgent}
           />
 
           {/* Dynamic Views based on activeTab */}
@@ -270,6 +345,9 @@ export const App: React.FC = () => {
                   recentLogs={events.filter((e) => e.agentId === agentId)}
                   isSelected={selectedAgentId === agentId}
                   onSelect={(id) => setSelectedAgentId(id)}
+                  onPause={handlePauseAgent}
+                  onResume={handleResumeAgent}
+                  onRetry={handleRetryAgent}
                 />
               ))}
             </div>
@@ -304,6 +382,9 @@ export const App: React.FC = () => {
                     recentLogs={events.filter((e) => e.agentId === agentId)}
                     isSelected={selectedAgentId === agentId}
                     onSelect={(id) => setSelectedAgentId(id)}
+                    onPause={handlePauseAgent}
+                    onResume={handleResumeAgent}
+                    onRetry={handleRetryAgent}
                   />
                 ))}
               </div>
@@ -316,14 +397,18 @@ export const App: React.FC = () => {
           events={events}
           activeAgentsCount={activeAgentsCount}
           gitStatus={gitStatus}
+          sessionTokens={sessionTokens}
+          sessionCost={sessionCost}
           onOpenDiffModal={() => setShowDiffModal(true)}
         />
       </div>
 
-      {/* 3. Right Live Communication & Task Panel (Fixed 290px) */}
+      {/* 3. Right Live Communication & Task Panel */}
       <LiveCommunicationPanel
         messages={messages}
         mission={mission}
+        sessionTokens={sessionTokens}
+        sessionCost={sessionCost}
         onSendMessage={(to, text) => {
           const newMsg: AgentMessagePayload = {
             id: `msg-${Date.now()}`,
@@ -362,10 +447,13 @@ export const App: React.FC = () => {
             }
           }
           events={events}
+          assignedModelId={currentSelectedModelId}
           onClose={() => setSelectedAgentId(undefined)}
           onPause={handlePauseAgent}
           onResume={handleResumeAgent}
           onStop={handleStopAgent}
+          onRetry={handleRetryAgent}
+          onModelChange={handleModelChange}
           onSendMessage={handleSendMessageToAgent}
         />
       )}

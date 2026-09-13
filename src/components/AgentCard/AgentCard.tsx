@@ -9,8 +9,16 @@ import {
   MessageSquare,
   Clock,
   ChevronRight,
+  Pause,
+  Play,
+  RotateCcw,
+  Lock,
+  AlertCircle,
+  Coins,
+  Cpu,
 } from 'lucide-react';
 import { AgentId, AgentStatus, AgentEvent } from '../../types';
+import { ROLE_COLORS, ROLE_GLOWS } from '../../config/models';
 import './AgentCard.css';
 
 interface AgentCardProps {
@@ -18,48 +26,74 @@ interface AgentCardProps {
   recentLogs: AgentEvent[];
   isSelected: boolean;
   onSelect: (agentId: AgentId) => void;
+  onPause?: (agentId: AgentId) => void;
+  onResume?: (agentId: AgentId) => void;
+  onRetry?: (agentId: AgentId) => void;
 }
 
-const AGENT_META: Record<
-  AgentId,
-  { icon: any; colorVar: string; pulseClass: string }
-> = {
-  orchestrator: { icon: Brain, colorVar: 'var(--telemetry-cyan)', pulseClass: 'pulse-cyan' },
-  design: { icon: Palette, colorVar: 'var(--telemetry-violet)', pulseClass: 'pulse-violet' },
-  coder: { icon: Code, colorVar: 'var(--telemetry-blue)', pulseClass: 'pulse-blue' },
-  research: { icon: FlaskConical, colorVar: 'var(--telemetry-emerald)', pulseClass: 'pulse-emerald' },
-  tester: { icon: FileCheck, colorVar: 'var(--telemetry-amber)', pulseClass: 'pulse-amber' },
+const AGENT_ICONS: Record<AgentId, any> = {
+  orchestrator: Brain,
+  design: Palette,
+  coder: Code,
+  research: FlaskConical,
+  tester: FileCheck,
 };
 
-const STATE_COLORS: Record<string, { label: string; color: string; dot: string }> = {
-  IDLE: { label: 'IDLE', color: 'var(--text-muted)', dot: '⚪' },
-  QUEUED: { label: 'QUEUED', color: 'var(--telemetry-amber)', dot: '🟡' },
-  STARTING: { label: 'STARTING', color: 'var(--telemetry-cyan)', dot: '🟢' },
-  WORKING: { label: 'WORKING', color: 'var(--telemetry-emerald)', dot: '🟢' },
-  WAITING: { label: 'WAITING', color: 'var(--telemetry-amber)', dot: '🟡' },
-  BLOCKED: { label: 'BLOCKED', color: 'var(--telemetry-amber)', dot: '🟠' },
-  REVIEWING: { label: 'REVIEWING', color: 'var(--telemetry-blue)', dot: '🔵' },
-  COMPLETED: { label: 'COMPLETED', color: 'var(--telemetry-emerald)', dot: '✓' },
-  FAILED: { label: 'FAILED', color: 'var(--telemetry-rose)', dot: '🔴' },
-  STOPPED: { label: 'STOPPED', color: 'var(--text-dim)', dot: '⏹' },
-};
+export const AgentCard: React.FC<AgentCardProps> = ({
+  status,
+  recentLogs,
+  isSelected,
+  onSelect,
+  onPause,
+  onResume,
+  onRetry,
+}) => {
+  const Icon = AGENT_ICONS[status.agentId] || Code;
+  const roleColor = ROLE_COLORS[status.agentId] || '#38bdf8';
+  const roleGlow = ROLE_GLOWS[status.agentId] || 'rgba(56, 189, 248, 0.4)';
 
-export const AgentCard: React.FC<AgentCardProps> = ({ status, recentLogs, isSelected, onSelect }) => {
-  const meta = AGENT_META[status.agentId] || AGENT_META.coder;
-  const Icon = meta.icon;
-  const stateMeta = STATE_COLORS[status.state] || STATE_COLORS.IDLE;
-  const isActive = status.state === 'WORKING' || status.state === 'STARTING' || status.state === 'REVIEWING';
+  const isWorking = status.state === 'WORKING' || status.state === 'STARTING' || status.state === 'REVIEWING';
+  const isBlocked = status.isBlocked || status.state === 'BLOCKED' || status.state === 'WAITING';
+  const isFailed = status.state === 'FAILED';
+  const isCompleted = status.state === 'COMPLETED';
+
+  const defaultCpu = status.agentId === 'coder' ? 58 : status.agentId === 'orchestrator' ? 34 : status.agentId === 'design' ? 26 : status.agentId === 'tester' ? 22 : 19;
+  const defaultTokens = status.agentId === 'orchestrator' ? '48.2k' : status.agentId === 'coder' ? '32.1k' : status.agentId === 'design' ? '18.4k' : status.agentId === 'research' ? '14.8k' : '12.0k';
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    onSelect(status.agentId);
+  };
+
+  const handleTogglePause = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isWorking) {
+      if (onPause) onPause(status.agentId);
+    } else {
+      if (onResume) onResume(status.agentId);
+    }
+  };
+
+  const handleRetry = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRetry) onRetry(status.agentId);
+  };
 
   return (
     <div
-      className={`agent-node-card ${isSelected ? 'card-selected' : ''} ${isActive ? meta.pulseClass : ''}`}
-      onClick={() => onSelect(status.agentId)}
-      style={{ '--agent-color': meta.colorVar } as React.CSSProperties}
+      className={`agent-node-card ${isSelected ? 'card-selected' : ''} ${isBlocked ? 'card-blocked' : ''} ${
+        isFailed ? 'card-failed' : ''
+      }`}
+      onClick={handleCardClick}
+      style={{
+        '--agent-color': roleColor,
+        '--agent-glow': roleGlow,
+        borderColor: isSelected ? roleColor : isFailed ? '#f43f5e' : isBlocked ? '#f59e0b' : 'rgba(255, 255, 255, 0.08)',
+      } as React.CSSProperties}
     >
       {/* Header */}
       <div className="card-top-row">
         <div className="agent-identity">
-          <div className="agent-avatar-icon">
+          <div className="agent-avatar-icon" style={{ borderColor: roleColor, color: roleColor }}>
             <Icon size={16} />
           </div>
           <div className="agent-names">
@@ -68,9 +102,20 @@ export const AgentCard: React.FC<AgentCardProps> = ({ status, recentLogs, isSele
           </div>
         </div>
 
-        <div className="card-state-pill" style={{ color: stateMeta.color }}>
-          <span className="state-dot">{stateMeta.dot}</span>
-          <span className="state-text">{stateMeta.label}</span>
+        {/* State Pill */}
+        <div
+          className="card-state-pill"
+          style={{
+            borderColor: isFailed ? '#f43f5e' : isBlocked ? '#f59e0b' : isCompleted ? '#34d399' : roleColor,
+            color: isFailed ? '#f43f5e' : isBlocked ? '#f59e0b' : isCompleted ? '#34d399' : roleColor,
+          }}
+        >
+          {isBlocked && <Lock size={10} className="mr-1" />}
+          {isFailed && <AlertCircle size={10} className="mr-1" />}
+          {isCompleted && <CheckCircle2 size={10} className="mr-1" />}
+          <span className="state-text">
+            {isBlocked ? 'BLOCKED' : isFailed ? 'FAILED' : status.state}
+          </span>
         </div>
       </div>
 
@@ -81,62 +126,70 @@ export const AgentCard: React.FC<AgentCardProps> = ({ status, recentLogs, isSele
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bar with Role Color */}
       <div className="card-progress-bar-wrapper">
         <div className="progress-track">
           <div
-            className={`progress-fill ${isActive ? 'shimmer-active' : ''}`}
+            className={`progress-fill ${isWorking ? 'shimmer-active' : ''}`}
             style={{
               width: `${status.progress}%`,
-              backgroundColor: meta.colorVar,
+              backgroundColor: isFailed ? '#f43f5e' : isBlocked ? '#f59e0b' : roleColor,
             }}
           ></div>
         </div>
         <span className="progress-percent-label">{status.progress}%</span>
       </div>
 
+      {/* Mini Resource & Token Gauge Bar */}
+      <div className="card-resource-row">
+        <div className="cr-item">
+          <Cpu size={10} color={roleColor} />
+          <span>CPU {status.cpuPercent || defaultCpu}%</span>
+        </div>
+        <div className="cr-divider">•</div>
+        <div className="cr-item">
+          <Coins size={10} color="#f59e0b" />
+          <span>{status.promptTokens ? `${Math.round((status.promptTokens + (status.completionTokens || 0)) / 1000)}k` : defaultTokens} tokens</span>
+        </div>
+      </div>
+
       {/* Current Activity Ticker */}
       <div className="card-current-action">
-        <span className="action-tag">CURRENT</span>
+        <span className="action-tag" style={{ color: roleColor }}>ACTION</span>
         <span className="action-text">
-          {status.currentAction || (isActive ? 'Processing swarm directives' : 'Ready on standby')}
+          {status.currentAction || (isWorking ? 'Processing swarm directives' : 'Ready on standby')}
         </span>
       </div>
 
-      {/* Mini Activity Log Stream */}
-      <div className="card-mini-logs">
-        <span className="mini-log-tag">RECENT ACTIVITY</span>
-        <div className="mini-log-list">
-          {recentLogs.length > 0 ? (
-            recentLogs.slice(-3).map((log, idx) => (
-              <div key={idx} className="mini-log-item">
-                <span className="log-time">
-                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                </span>
-                <span className="log-msg">
-                  {(log.payload as any).message || (log.payload as any).currentAction || log.type}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="mini-log-empty">No telemetry events logged yet.</div>
-          )}
-        </div>
-      </div>
-
-      {/* Footer Telemetry Counters */}
+      {/* Footer Telemetry & Per-Agent Controls */}
       <div className="card-footer-telemetry">
-        <div className="counter-item" title="Files touched in workspace">
-          <FileCheck size={12} className="counter-icon" />
-          <span>Files: {status.filesTouchedCount}</span>
+        <div className="footer-left-meta">
+          <span title="Files modified">Files: {status.filesTouchedCount}</span>
+          <span>•</span>
+          <span title="Messages exchanged">Msgs: {status.messagesCount}</span>
         </div>
-        <div className="counter-item" title="Messages exchanged">
-          <MessageSquare size={12} className="counter-icon" />
-          <span>Msgs: {status.messagesCount}</span>
-        </div>
-        <div className="inspect-arrow">
-          <span>Details</span>
-          <ChevronRight size={12} />
+
+        <div className="footer-right-controls">
+          {onPause && onResume && (
+            <button
+              className="card-quick-btn"
+              onClick={handleTogglePause}
+              title={isWorking ? 'Pause agent' : 'Resume agent'}
+            >
+              {isWorking ? <Pause size={11} color="#f59e0b" /> : <Play size={11} color="#34d399" />}
+            </button>
+          )}
+
+          {isFailed && onRetry && (
+            <button className="card-quick-btn btn-retry" onClick={handleRetry} title="Retry failed task">
+              <RotateCcw size={11} color="#f43f5e" />
+            </button>
+          )}
+
+          <div className="inspect-arrow">
+            <span>Inspect</span>
+            <ChevronRight size={11} />
+          </div>
         </div>
       </div>
     </div>

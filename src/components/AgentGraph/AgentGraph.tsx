@@ -7,18 +7,24 @@ import {
   Infinity as InfinityIcon,
   Search,
   Radio,
-  Share2,
   Layers,
   Settings2,
   Sliders,
   Check,
+  Lock,
+  AlertTriangle,
+  RotateCcw,
+  Pause,
+  Play,
+  Zap,
 } from 'lucide-react';
 import {
-  AVAILABLE_MODELS,
   ModelTopologyMode,
   TOPOLOGY_PRESETS,
   ALL_SUPPORTED_MODELS,
   DetailedAIModel,
+  ROLE_COLORS,
+  ROLE_GLOWS,
 } from '../../config/models';
 import './AgentGraph.css';
 
@@ -31,64 +37,108 @@ interface AgentGraphProps {
   customAssignments?: Partial<Record<AgentId, string>>;
   onSelectTopologyMode: (mode: ModelTopologyMode) => void;
   onOpenModelConfig: () => void;
+  onModelChange?: (agentId: AgentId, modelId: string) => void;
+  onTogglePauseAgent?: (agentId: AgentId) => void;
+  onRetryAgent?: (agentId: AgentId) => void;
 }
 
-interface TravellingPacket {
+interface DynamicPacket {
   id: string;
   from: AgentId;
   to: AgentId;
   color: string;
   label: string;
-  startTime: number;
 }
 
-// Coordinate topology (0 to 1000 viewBox) - exact 3-tier layout
-const NODE_COORDINATES: Record<
+// Hierarchical tiered node geometry
+const NODE_HIERARCHY: Record<
   AgentId,
-  { x: number; y: number; roleKey: string; defaultModel: string; badges?: string[] }
+  {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+    tier: 'apex' | 'mid' | 'leaf';
+    roleKey: string;
+    badges: string[];
+    defaultTokens: string;
+    defaultCpu: number;
+  }
 > = {
   orchestrator: {
     x: 500,
-    y: 105,
+    y: 95,
+    w: 236,
+    h: 104,
+    tier: 'apex',
     roleKey: 'Orchestrator',
-    defaultModel: 'Gemini 1.5 Pro',
-    badges: ['Task Decomposed: 4 subtasks created', 'Planning: Coordinating agents'],
+    badges: ['Task Decomposed: 5 subtasks', 'Coordinating Swarm'],
+    defaultTokens: '48.2k',
+    defaultCpu: 34,
   },
   design: {
     x: 230,
     y: 275,
+    w: 204,
+    h: 88,
+    tier: 'mid',
     roleKey: 'Design & UX',
-    defaultModel: 'Claude 3.5 Sonnet',
-    badges: ['UI/UX Analysis: Designing new layout...'],
+    badges: ['UI Specs & Tokens'],
+    defaultTokens: '18.4k',
+    defaultCpu: 26,
   },
   coder: {
     x: 770,
     y: 275,
+    w: 204,
+    h: 88,
+    tier: 'mid',
     roleKey: 'Backend & Code',
-    defaultModel: 'GPT-4o',
-    badges: ['Implementing Features: Editing 6 files...'],
+    badges: ['AST Transformations'],
+    defaultTokens: '32.1k',
+    defaultCpu: 58,
   },
   research: {
     x: 350,
-    y: 465,
+    y: 470,
+    w: 192,
+    h: 82,
+    tier: 'leaf',
     roleKey: 'Research',
-    defaultModel: 'Perplexity Sonar',
-    badges: ['Researching best practices: Found 12 relevant sources'],
+    badges: ['12 sources cited'],
+    defaultTokens: '14.8k',
+    defaultCpu: 19,
   },
   tester: {
     x: 650,
-    y: 465,
+    y: 470,
+    w: 192,
+    h: 82,
+    tier: 'leaf',
     roleKey: 'Testing & Review',
-    defaultModel: 'Llama 3.1 70B',
-    badges: ['Test suite in progress: 14/37 tests passed'],
+    badges: ['WCAG AAA & Regressions'],
+    defaultTokens: '12.0k',
+    defaultCpu: 22,
   },
 };
 
-// Data transfer badge markers along the curves
+// Continuous connection paths
+const PIPELINE_PATHS = {
+  orchToDesign: 'M 500,147 C 410,180 290,200 230,231',
+  orchToCoder: 'M 500,147 C 590,180 710,200 770,231',
+  designToResearch: 'M 230,319 C 230,395 285,435 350,449',
+  coderToTester: 'M 770,319 C 770,395 715,435 650,449',
+  researchToOrch: 'M 350,429 C 410,340 460,220 480,147',
+  testerToOrch: 'M 650,429 C 590,340 540,220 520,147',
+};
+
+// Data transfer badge markers
 const DATA_BADGES = [
-  { text: 'Sending context • 2.4s • 12 KB', x: 340, y: 185 },
-  { text: 'Sharing results • 1.8s • 8 KB', x: 500, y: 350 },
-  { text: 'Syncing changes • 0.9s • 4 KB', x: 670, y: 370 },
+  { text: 'Directive Dispatch • 12 KB/s', x: 335, y: 180, color: '#38bdf8' },
+  { text: 'Feature Implementation • 28 KB/s', x: 665, y: 180, color: '#34d399' },
+  { text: 'Design Specs • 8 KB/s', x: 260, y: 380, color: '#c084fc' },
+  { text: 'Verification Suite • 14 KB/s', x: 740, y: 380, color: '#f43f5e' },
+  { text: 'Convergence Loop • 6 KB/s', x: 500, y: 320, color: '#38bdf8' },
 ];
 
 export const AgentGraph: React.FC<AgentGraphProps> = ({
@@ -100,11 +150,16 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
   customAssignments = {},
   onSelectTopologyMode,
   onOpenModelConfig,
+  onModelChange,
+  onTogglePauseAgent,
+  onRetryAgent,
 }) => {
-  const [packets, setPackets] = useState<TravellingPacket[]>([]);
+  const [dynamicPackets, setDynamicPackets] = useState<DynamicPacket[]>([]);
+  const [hoveredAgentId, setHoveredAgentId] = useState<AgentId | null>(null);
+  const [modelDropdownAgentId, setModelDropdownAgentId] = useState<AgentId | null>(null);
   const processedEventIds = useRef<Set<string>>(new Set());
 
-  // Listen for real message/task events to trigger travelling data packets
+  // Listen for real message/task events to trigger transient packets
   useEffect(() => {
     if (recentEvents.length === 0) return;
     const latest = recentEvents[recentEvents.length - 1];
@@ -113,30 +168,30 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
 
     if (latest.type === 'AGENT_MESSAGE') {
       const msg = latest.payload as AgentMessagePayload;
-      if (msg.to !== 'broadcast' && NODE_COORDINATES[msg.from] && NODE_COORDINATES[msg.to]) {
-        addPacket(msg.from, msg.to, '#00f0ff', msg.subject);
+      if (msg.to !== 'broadcast' && NODE_HIERARCHY[msg.from] && NODE_HIERARCHY[msg.to]) {
+        addDynamicPacket(msg.from, msg.to, ROLE_COLORS[msg.from] || '#00f0ff', msg.subject);
       }
     } else if (latest.type === 'TASK_CREATED') {
       const task = latest.payload as any;
       const tgt = task.agentId as AgentId;
-      if (tgt && NODE_COORDINATES[tgt]) {
-        addPacket('orchestrator', tgt, '#00f0ff', 'TASK DISPATCH');
+      if (tgt && NODE_HIERARCHY[tgt]) {
+        addDynamicPacket('orchestrator', tgt, '#38bdf8', 'TASK');
       }
     } else if (latest.type === 'TASK_COMPLETED') {
       const task = (latest.payload as any).task;
       const src = task?.agentId as AgentId;
-      if (src && NODE_COORDINATES[src]) {
-        addPacket(src, 'orchestrator', '#10b981', 'COMPLETED');
+      if (src && NODE_HIERARCHY[src]) {
+        addDynamicPacket(src, 'orchestrator', '#34d399', 'DONE');
       }
     }
   }, [recentEvents]);
 
-  const addPacket = (from: AgentId, to: AgentId, color: string, label: string) => {
+  const addDynamicPacket = (from: AgentId, to: AgentId, color: string, label: string) => {
     const packetId = `pkt-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-    setPackets((prev) => [...prev.slice(-10), { id: packetId, from, to, color, label, startTime: Date.now() }]);
+    setDynamicPackets((prev) => [...prev.slice(-8), { id: packetId, from, to, color, label }]);
     setTimeout(() => {
-      setPackets((prev) => prev.filter((p) => p.id !== packetId));
-    }, 1400);
+      setDynamicPackets((prev) => prev.filter((p) => p.id !== packetId));
+    }, 1600);
   };
 
   const getModelForAgent = (agentId: AgentId): DetailedAIModel => {
@@ -205,175 +260,274 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
         <div className="gtb-right">
           <button className="gtb-config-btn" onClick={onOpenModelConfig} title="Configure models and parameters">
             <Settings2 size={13} />
-            <span>Configure Models</span>
+            <span>Configure Swarm</span>
           </button>
         </div>
       </div>
 
       {/* Hero Graph Canvas */}
       <div className="multi-agent-graph-canvas">
-        <svg className="mag-svg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet">
+        <svg className="mag-svg" viewBox="0 0 1000 570" preserveAspectRatio="xMidYMid meet">
           <defs>
-            <radialGradient id="apexGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="rgba(56, 189, 248, 0.25)" />
+            {/* Ambient Radial Glows */}
+            <radialGradient id="apexOrchGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="rgba(56, 189, 248, 0.3)" />
               <stop offset="100%" stopColor="transparent" />
             </radialGradient>
             <filter id="packetGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feGaussianBlur stdDeviation="3.5" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
                 <feMergeNode in="SourceGraphic" />
               </feMerge>
             </filter>
+
+            {/* Diagonal Hatch Pattern for Blocked / Waiting State */}
+            <pattern id="blockedHatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(245, 158, 11, 0.25)" strokeWidth="3" />
+            </pattern>
           </defs>
 
-          {/* 1. Curved Spline Interconnection Channels */}
+          {/* 1. Curved Spline Channels with Directional Gradient Stems */}
           <g className="channels-layer">
-            {/* Orchestrator -> Design */}
-            <path d="M 500,135 Q 320,165 230,235" className="spline-channel sc-cyan" />
-            {/* Orchestrator -> Coder */}
-            <path d="M 500,135 Q 680,165 770,235" className="spline-channel sc-emerald" />
-            {/* Design -> Research */}
-            <path d="M 230,315 Q 240,425 350,445" className="spline-channel sc-amber" />
-            {/* Coder -> Tester */}
-            <path d="M 770,315 Q 760,425 650,445" className="spline-channel sc-purple" />
-            {/* Research -> Orchestrator Loop */}
-            <path d="M 350,445 Q 500,335 500,165" className="spline-channel sc-cyan" />
-            {/* Tester -> Orchestrator Loop */}
-            <path d="M 650,445 Q 500,335 500,165" className="spline-channel sc-purple" />
+            <path id="pathOrchDesign" d={PIPELINE_PATHS.orchToDesign} className="spline-channel sc-cyan" />
+            <path id="pathOrchCoder" d={PIPELINE_PATHS.orchToCoder} className="spline-channel sc-emerald" />
+            <path id="pathDesignResearch" d={PIPELINE_PATHS.designToResearch} className="spline-channel sc-violet" />
+            <path id="pathCoderTester" d={PIPELINE_PATHS.coderToTester} className="spline-channel sc-rose" />
+            <path id="pathResearchOrch" d={PIPELINE_PATHS.researchToOrch} className="spline-channel sc-amber" />
+            <path id="pathTesterOrch" d={PIPELINE_PATHS.testerToOrch} className="spline-channel sc-rose" />
           </g>
 
-          {/* 2. Floating Data Transfer Badges along Curves */}
+          {/* 2. Continuous Flowing Particles Along Splines */}
+          <g className="continuous-particles-layer">
+            {/* Orch -> Design particle */}
+            <circle r="3.5" fill="#38bdf8" filter="url(#packetGlow)">
+              <animateMotion dur="2.4s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} />
+            </circle>
+            {/* Orch -> Coder particle */}
+            <circle r="4" fill="#34d399" filter="url(#packetGlow)">
+              <animateMotion dur="2.1s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} />
+            </circle>
+            {/* Design -> Research particle */}
+            <circle r="3" fill="#c084fc" filter="url(#packetGlow)">
+              <animateMotion dur="2.6s" repeatCount="indefinite" path={PIPELINE_PATHS.designToResearch} />
+            </circle>
+            {/* Coder -> Tester particle */}
+            <circle r="3.5" fill="#f43f5e" filter="url(#packetGlow)">
+              <animateMotion dur="2.2s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} />
+            </circle>
+            {/* Research -> Orch feedback */}
+            <circle r="3" fill="#fb923c" filter="url(#packetGlow)">
+              <animateMotion dur="3.0s" repeatCount="indefinite" path={PIPELINE_PATHS.researchToOrch} />
+            </circle>
+            {/* Tester -> Orch feedback */}
+            <circle r="3" fill="#f43f5e" filter="url(#packetGlow)">
+              <animateMotion dur="2.7s" repeatCount="indefinite" path={PIPELINE_PATHS.testerToOrch} />
+            </circle>
+          </g>
+
+          {/* 3. Floating Data Transfer Volume Pills along Curves */}
           <g className="data-badges-layer">
             {DATA_BADGES.map((b, idx) => (
               <g key={idx} transform={`translate(${b.x}, ${b.y})`}>
-                <rect x="-85" y="-12" width="170" height="24" rx="12" className="data-transfer-pill" />
-                <text x="0" y="4" className="data-transfer-text">
+                <rect x="-85" y="-11" width="170" height="22" rx="11" className="data-transfer-pill" />
+                <text x="0" y="4" className="data-transfer-text" style={{ fill: b.color }}>
                   {b.text}
                 </text>
               </g>
             ))}
           </g>
 
-          {/* 3. Travelling Animated Packets */}
-          <g className="travelling-packets-layer">
-            {packets.map((pkt) => {
-              const src = NODE_COORDINATES[pkt.from];
-              const dst = NODE_COORDINATES[pkt.to];
-              if (!src || !dst) return null;
-              const midX = (src.x + dst.x) / 2;
-              const midY = (src.y + dst.y) / 2;
-              const pathData = `M ${src.x},${src.y} Q ${midX},${midY} ${dst.x},${dst.y}`;
-
-              return (
-                <circle
-                  key={pkt.id}
-                  r="6"
-                  className="travelling-pulse-dot"
-                  style={{
-                    offsetPath: `path('${pathData}')`,
-                    fill: pkt.color,
-                    filter: 'url(#packetGlow)',
-                  } as React.CSSProperties}
-                />
-              );
-            })}
-          </g>
-
-          {/* 4. Multi-Model Nodes */}
+          {/* 4. Multi-Model Nodes with Tiered Hierarchy */}
           <g className="model-nodes-layer">
-            {(Object.keys(NODE_COORDINATES) as AgentId[]).map((agentId) => {
-              const node = NODE_COORDINATES[agentId];
+            {(Object.keys(NODE_HIERARCHY) as AgentId[]).map((agentId) => {
+              const node = NODE_HIERARCHY[agentId];
+              const roleColor = ROLE_COLORS[agentId];
+              const roleGlow = ROLE_GLOWS[agentId];
               const status = statuses[agentId] || {
                 state: 'WORKING',
-                progress: agentId === 'orchestrator' ? 78 : agentId === 'design' ? 62 : agentId === 'coder' ? 71 : agentId === 'research' ? 54 : 38,
+                progress: agentId === 'orchestrator' ? 82 : agentId === 'design' ? 68 : agentId === 'coder' ? 74 : agentId === 'research' ? 58 : 42,
               };
               const isSelected = selectedAgentId === agentId;
+              const isHovered = hoveredAgentId === agentId;
               const model = getModelForAgent(agentId);
+
+              const isBlocked = status.isBlocked || status.state === 'BLOCKED' || status.state === 'WAITING';
+              const isFailed = status.state === 'FAILED';
               const isWorking = status.state === 'WORKING' || status.state === 'STARTING';
+              const isApex = node.tier === 'apex';
 
               const renderIcon = () => {
-                if (model.provider === 'google') return <Sparkles size={17} color={model.color} />;
-                if (model.provider === 'anthropic') return <Sun size={17} color={model.color} />;
-                if (model.provider === 'openai') return <Cpu size={17} color={model.color} />;
-                if (model.provider === 'meta') return <InfinityIcon size={17} color={model.color} />;
-                if (model.provider === 'perplexity') return <Search size={17} color={model.color} />;
-                return <Radio size={17} color={model.color} />;
+                if (model.provider === 'google') return <Sparkles size={isApex ? 19 : 16} color={roleColor} />;
+                if (model.provider === 'anthropic') return <Sun size={isApex ? 19 : 16} color={roleColor} />;
+                if (model.provider === 'openai') return <Cpu size={isApex ? 19 : 16} color={roleColor} />;
+                if (model.provider === 'meta') return <InfinityIcon size={isApex ? 19 : 16} color={roleColor} />;
+                if (model.provider === 'perplexity') return <Search size={isApex ? 19 : 16} color={roleColor} />;
+                return <Radio size={isApex ? 19 : 16} color={roleColor} />;
               };
+
+              const halfW = node.w / 2;
+              const halfH = node.h / 2;
 
               return (
                 <g
                   key={agentId}
-                  className={`swarm-node-group ${isSelected ? 'node-active-selected' : ''}`}
+                  className={`swarm-node-group node-tier-${node.tier} ${isSelected ? 'node-active-selected' : ''} ${
+                    isBlocked ? 'node-state-blocked' : ''
+                  } ${isFailed ? 'node-state-failed' : ''}`}
                   transform={`translate(${node.x}, ${node.y})`}
                   onClick={() => onSelectAgent(agentId)}
+                  onMouseEnter={() => setHoveredAgentId(agentId)}
+                  onMouseLeave={() => setHoveredAgentId(null)}
                 >
-                  {/* Node Outer Halo */}
+                  {/* Outer Apex Aura for Orchestrator */}
+                  {isApex && (
+                    <rect
+                      x={-halfW - 8}
+                      y={-halfH - 8}
+                      width={node.w + 16}
+                      height={node.h + 16}
+                      rx="16"
+                      fill="none"
+                      stroke={roleColor}
+                      strokeWidth="1"
+                      strokeDasharray="4 4"
+                      className="apex-outer-halo"
+                    />
+                  )}
+
+                  {/* Main Node Box */}
                   <rect
-                    x="-96"
-                    y="-42"
-                    width="192"
-                    height="84"
-                    rx="12"
+                    x={-halfW}
+                    y={-halfH}
+                    width={node.w}
+                    height={node.h}
+                    rx={isApex ? 14 : 10}
                     className="swarm-node-bg"
                     style={{
-                      stroke: model.color,
+                      stroke: isFailed ? '#f43f5e' : isBlocked ? '#f59e0b' : roleColor,
+                      strokeWidth: isApex ? 2.5 : 1.8,
                     }}
                   />
 
-                  {/* Upper Status Pill Badges for Orchestrator */}
-                  {agentId === 'orchestrator' && (
-                    <>
-                      <g transform="translate(-135, -58)">
-                        <rect x="0" y="0" width="125" height="18" rx="9" className="mini-badge-pill" />
-                        <text x="62" y="12" className="mini-badge-text">Task Decomposed • 4</text>
-                      </g>
-                      <g transform="translate(10, -58)">
-                        <rect x="0" y="0" width="125" height="18" rx="9" className="mini-badge-pill" />
-                        <text x="62" y="12" className="mini-badge-text">Planning • Coordinating</text>
-                      </g>
-                    </>
+                  {/* Blocked Hatch Pattern Overlay */}
+                  {isBlocked && (
+                    <rect
+                      x={-halfW}
+                      y={-halfH}
+                      width={node.w}
+                      height={node.h}
+                      rx={isApex ? 14 : 10}
+                      fill="url(#blockedHatch)"
+                      opacity="0.75"
+                    />
+                  )}
+
+                  {/* Top Apex Crown Badge for Orchestrator */}
+                  {isApex && (
+                    <g transform={`translate(-80, ${-halfH - 14})`}>
+                      <rect x="0" y="0" width="160" height="20" rx="10" className="apex-crown-pill" />
+                      <text x="80" y="14" className="apex-crown-text">
+                        ★ APEX ORCHESTRATOR
+                      </text>
+                    </g>
+                  )}
+
+                  {/* Blocked Warning Badge */}
+                  {isBlocked && (
+                    <g transform={`translate(-70, ${-halfH - 12})`}>
+                      <rect x="0" y="0" width="140" height="20" rx="6" className="blocked-status-pill" />
+                      <text x="70" y="14" className="blocked-status-text">
+                        🔒 WAITING ON SPEC
+                      </text>
+                    </g>
+                  )}
+
+                  {/* Error & Retry Badge */}
+                  {isFailed && (
+                    <g transform={`translate(-65, ${-halfH - 12})`}>
+                      <rect x="0" y="0" width="130" height="20" rx="6" className="failed-status-pill" />
+                      <text x="65" y="14" className="failed-status-text">
+                        ⚠️ FAILED • RETRY #1
+                      </text>
+                    </g>
                   )}
 
                   {/* Model Icon / Avatar Circle */}
-                  <g transform="translate(-76, -26)">
-                    <circle cx="16" cy="16" r="14" fill="rgba(255,255,255,0.05)" stroke={model.color} strokeWidth="1" />
-                    <g transform="translate(7, 7)">{renderIcon()}</g>
+                  <g transform={`translate(${-halfW + 16}, ${-halfH + 16})`}>
+                    <circle
+                      cx={isApex ? 18 : 15}
+                      cy={isApex ? 18 : 15}
+                      r={isApex ? 17 : 14}
+                      fill="rgba(255,255,255,0.06)"
+                      stroke={roleColor}
+                      strokeWidth="1.2"
+                    />
+                    <g transform={`translate(${isApex ? 8 : 7}, ${isApex ? 8 : 7})`}>{renderIcon()}</g>
                   </g>
 
-                  {/* Model Title */}
-                  <text x="-32" y="-10" className="node-model-title">
+                  {/* Model Title (Clickable for mid-run override) */}
+                  <text x={-halfW + (isApex ? 60 : 54)} y={-halfH + (isApex ? 26 : 22)} className="node-model-title">
                     {model.name}
                   </text>
 
                   {/* Role Subtitle */}
-                  <text x="-32" y="5" className="node-role-subtitle" fill={model.color}>
+                  <text
+                    x={-halfW + (isApex ? 60 : 54)}
+                    y={-halfH + (isApex ? 42 : 36)}
+                    className="node-role-subtitle"
+                    fill={roleColor}
+                  >
                     {node.roleKey}
                   </text>
 
-                  {/* Progress State */}
-                  <text x="-32" y="21" className="node-action-progress">
-                    {isWorking ? 'Working...' : status.state} {status.progress}%
+                  {/* Progress & Live State Text */}
+                  <text
+                    x={-halfW + (isApex ? 60 : 54)}
+                    y={-halfH + (isApex ? 58 : 50)}
+                    className="node-action-progress"
+                  >
+                    {isBlocked ? 'Blocked' : isFailed ? 'Failed' : isWorking ? 'Working...' : status.state}{' '}
+                    {status.progress}%
                   </text>
 
-                  {/* Mini Progress Line */}
-                  <line x1="-32" y1="28" x2="72" y2="28" stroke="rgba(255,255,255,0.1)" strokeWidth="2" rx="1" />
+                  {/* Progress Track Line */}
                   <line
-                    x1="-32"
-                    y1="28"
-                    x2={-32 + (104 * status.progress) / 100}
-                    y2="28"
-                    stroke={model.color}
-                    strokeWidth="2"
-                    rx="1"
+                    x1={-halfW + (isApex ? 60 : 54)}
+                    y1={-halfH + (isApex ? 65 : 56)}
+                    x2={halfW - 16}
+                    y2={-halfH + (isApex ? 65 : 56)}
+                    stroke="rgba(255,255,255,0.12)"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  />
+                  <line
+                    x1={-halfW + (isApex ? 60 : 54)}
+                    y1={-halfH + (isApex ? 65 : 56)}
+                    x2={
+                      -halfW +
+                      (isApex ? 60 : 54) +
+                      ((halfW - 16 - (-halfW + (isApex ? 60 : 54))) * status.progress) / 100
+                    }
+                    y2={-halfH + (isApex ? 65 : 56)}
+                    stroke={isFailed ? '#f43f5e' : isBlocked ? '#f59e0b' : roleColor}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
                   />
 
-                  {/* Bottom Context Pill Badge (for worker agents) */}
-                  {agentId !== 'orchestrator' && node.badges && (
-                    <g transform="translate(-86, 52)">
-                      <rect x="0" y="0" width="172" height="20" rx="6" className="worker-badge-pill" />
-                      <text x="86" y="13" className="worker-badge-text">
-                        {node.badges[0].slice(0, 28)}...
+                  {/* Per-Node Mini Resource & Token Usage Tag */}
+                  <g transform={`translate(${-halfW + 16}, ${halfH - 20})`}>
+                    <text x="0" y="10" className="node-resource-text">
+                      CPU {status.cpuPercent || node.defaultCpu}% • {status.promptTokens ? `${Math.round((status.promptTokens + (status.completionTokens || 0)) / 1000)}k` : node.defaultTokens} tok
+                    </text>
+                  </g>
+
+                  {/* Node Bottom Context Pill Badge */}
+                  {!isApex && node.badges && (
+                    <g transform={`translate(${-halfW + 14}, ${halfH + 8})`}>
+                      <rect x="0" y="0" width={node.w - 28} height="18" rx="5" className="worker-badge-pill" />
+                      <text x={(node.w - 28) / 2} y="12" className="worker-badge-text">
+                        {node.badges[0]}
                       </text>
                     </g>
                   )}

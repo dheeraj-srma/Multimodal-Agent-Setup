@@ -1,12 +1,12 @@
 .agent-node-card {
-  background: var(--bg-surface-glass);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--border-subtle);
+  background: rgba(10, 16, 28, 0.92);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  padding: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
@@ -14,15 +14,29 @@
 }
 
 .agent-node-card:hover {
-  background: var(--bg-surface-glass-active);
-  border-color: var(--agent-color);
+  background: rgba(15, 24, 42, 0.98);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 16px var(--agent-glow, rgba(56, 189, 248, 0.2));
 }
 
 .card-selected {
-  border-color: var(--agent-color) !important;
-  box-shadow: 0 0 20px rgba(0, 240, 255, 0.25);
+  border-color: var(--agent-color, #38bdf8) !important;
+  box-shadow: 0 0 24px var(--agent-glow, rgba(56, 189, 248, 0.35)) !important;
+}
+
+.card-blocked {
+  border-color: #f59e0b !important;
+  opacity: 0.9;
+}
+
+.card-failed {
+  border-color: #f43f5e !important;
+  animation: pulse-card-err 1.4s infinite alternate;
+}
+
+@keyframes pulse-card-err {
+  from { box-shadow: 0 0 6px rgba(244, 63, 94, 0.3); }
+  to { box-shadow: 0 0 18px rgba(244, 63, 94, 0.6); }
 }
 
 .card-top-row {
@@ -42,11 +56,11 @@
   height: 32px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--agent-color);
+  border: 1px solid var(--agent-color, #38bdf8);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--agent-color);
+  color: var(--agent-color, #38bdf8);
 }
 
 .agent-names {
@@ -55,47 +69,47 @@
 }
 
 .agent-role-title {
-  font-family: var(--font-sans);
+  font-family: var(--font-sans, -apple-system, sans-serif);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
 }
 
 .agent-sub-id {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono, monospace);
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--text-dim, #64748b);
 }
 
 .card-state-pill {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid var(--border-dim);
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--border-dim, rgba(255, 255, 255, 0.12));
   padding: 3px 8px;
   border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  font-weight: 700;
 }
 
-.state-dot {
-  font-size: 10px;
+.mr-1 {
+  margin-right: 2px;
 }
 
 .state-text {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
   letter-spacing: 0.04em;
 }
 
 .card-task-section {
-  min-height: 36px;
+  min-height: 32px;
 }
 
 .task-title-text {
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--text-primary);
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--text-secondary, #cbd5e1);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -110,7 +124,7 @@
 
 .progress-track {
   flex: 1;
-  height: 6px;
+  height: 5px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 3px;
   overflow: hidden;
@@ -124,112 +138,114 @@
 }
 
 .progress-percent-label {
-  font-family: var(--font-mono);
-  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-secondary);
-  width: 34px;
+  color: var(--text-secondary, #cbd5e1);
+  width: 32px;
   text-align: right;
+}
+
+/* Mini Resource Row */
+.card-resource-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  color: var(--text-secondary, #cbd5e1);
+}
+
+.cr-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cr-divider {
+  color: var(--text-dim, #64748b);
 }
 
 .card-current-action {
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border-dim);
-  border-radius: 5px;
-  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 5px 8px;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
 .action-tag {
-  font-family: var(--font-mono);
-  font-size: 9px;
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
+  font-weight: 700;
 }
 
 .action-text {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--agent-color);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: var(--text-secondary, #cbd5e1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.card-mini-logs {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.mini-log-tag {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-}
-
-.mini-log-list {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.mini-log-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-
-.log-time {
-  color: var(--text-dim);
-  font-size: 9px;
-}
-
-.log-msg {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
-.mini-log-empty {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-dim);
-  font-style: italic;
 }
 
 .card-footer-telemetry {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid var(--border-dim);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 8px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  color: var(--text-muted, #94a3b8);
 }
 
-.counter-item {
+.footer-left-meta {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
 }
 
-.counter-icon {
-  color: var(--text-dim);
+.footer-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-quick-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card-quick-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-retry {
+  background: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.35);
 }
 
 .inspect-arrow {
   display: flex;
   align-items: center;
   gap: 3px;
-  color: var(--agent-color);
-  font-weight: 500;
+  color: var(--agent-color, #38bdf8);
+  font-weight: 600;
 }

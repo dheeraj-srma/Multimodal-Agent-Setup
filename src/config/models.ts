@@ -8,6 +8,46 @@ export interface DetailedAIModel extends AIModelConfig {
   description: string;
 }
 
+export const ROLE_COLORS: Record<AgentId, string> = {
+  orchestrator: '#38bdf8', // Electric Cyan
+  design: '#c084fc',       // Neon Violet
+  coder: '#34d399',        // Emerald
+  research: '#fb923c',     // Amber Coral
+  tester: '#f43f5e',       // Rose Crimson
+};
+
+export const ROLE_GLOWS: Record<AgentId, string> = {
+  orchestrator: 'rgba(56, 189, 248, 0.5)',
+  design: 'rgba(192, 132, 252, 0.5)',
+  coder: 'rgba(52, 211, 153, 0.5)',
+  research: 'rgba(251, 146, 60, 0.5)',
+  tester: 'rgba(244, 63, 94, 0.5)',
+};
+
+export const getRoleColor = (agentId: AgentId): string => ROLE_COLORS[agentId] || '#38bdf8';
+export const getRoleGlow = (agentId: AgentId): string => ROLE_GLOWS[agentId] || 'rgba(56, 189, 248, 0.4)';
+
+export const MODEL_PRICING: Record<string, { promptPer1M: number; completionPer1M: number }> = {
+  'gemini-1.5-pro': { promptPer1M: 0.0, completionPer1M: 0.0 }, // Included with Antigravity Subscription
+  'gemini-1.5-flash': { promptPer1M: 0.0, completionPer1M: 0.0 },
+  'claude-3.5-sonnet': { promptPer1M: 3.0, completionPer1M: 15.0 },
+  'claude-3.5-haiku': { promptPer1M: 0.8, completionPer1M: 4.0 },
+  'gpt-4o': { promptPer1M: 2.5, completionPer1M: 10.0 },
+  'gpt-4o-mini': { promptPer1M: 0.15, completionPer1M: 0.6 },
+  'perplexity-sonar': { promptPer1M: 1.0, completionPer1M: 1.0 },
+  'llama-3.1-70b': { promptPer1M: 0.8, completionPer1M: 0.8 },
+  'llama-3.3-70b': { promptPer1M: 0.0, completionPer1M: 0.0 }, // Local
+  'ollama-deepseek': { promptPer1M: 0.0, completionPer1M: 0.0 }, // Local
+  'qwen-2.5-coder': { promptPer1M: 0.0, completionPer1M: 0.0 }, // Local
+  'mistral-large': { promptPer1M: 2.0, completionPer1M: 6.0 },
+};
+
+export const calculateTokenCost = (modelId: string, promptTokens: number, completionTokens: number): number => {
+  const rates = MODEL_PRICING[modelId] || { promptPer1M: 1.0, completionPer1M: 3.0 };
+  const cost = (promptTokens / 1_000_000) * rates.promptPer1M + (completionTokens / 1_000_000) * rates.completionPer1M;
+  return Math.round(cost * 10000) / 10000;
+};
+
 export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
   {
     id: 'gemini-1.5-pro',
@@ -50,8 +90,8 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     role: 'Design Agent',
     agentId: 'design',
     badge: 'Design & UX',
-    color: '#fb923c',
-    glowColor: 'rgba(251, 146, 60, 0.45)',
+    color: '#c084fc',
+    glowColor: 'rgba(192, 132, 252, 0.45)',
     actionText: 'UI/UX Analysis • Designing new layout...',
     statusBadgeText: 'Wireframe & Token Audit',
     contextWindow: '200,000 tokens',
@@ -118,8 +158,8 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     role: 'Research Agent',
     agentId: 'research',
     badge: 'Research',
-    color: '#38bdf8',
-    glowColor: 'rgba(56, 189, 248, 0.4)',
+    color: '#fb923c',
+    glowColor: 'rgba(251, 146, 60, 0.45)',
     actionText: 'Researching best practices • Found 12 relevant sources',
     statusBadgeText: 'Deep Benchmark Scan',
     contextWindow: '128,000 tokens',
@@ -135,8 +175,8 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     role: 'Test / Review Agent',
     agentId: 'tester',
     badge: 'Testing & Review',
-    color: '#c084fc',
-    glowColor: 'rgba(192, 132, 252, 0.45)',
+    color: '#f43f5e',
+    glowColor: 'rgba(244, 63, 94, 0.45)',
     actionText: 'Test suite in progress • 14/37 tests passed',
     statusBadgeText: 'WCAG AAA & Regression Guard',
     contextWindow: '128,000 tokens',

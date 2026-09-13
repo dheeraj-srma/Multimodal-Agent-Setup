@@ -13,6 +13,7 @@ import {
   Square,
   User,
   Radio,
+  Coins,
 } from 'lucide-react';
 import { Mission, GitStatusInfo } from '../../types';
 import './TopBar.css';
@@ -21,6 +22,8 @@ interface TopBarProps {
   mission?: Mission;
   gitStatus: GitStatusInfo;
   activeAgentsCount: number;
+  sessionTokens?: number;
+  sessionCost?: number;
   onOpenGitModal: () => void;
   onOpenDiffModal: () => void;
   onOpenReportModal: () => void;
@@ -34,6 +37,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   mission,
   gitStatus,
   activeAgentsCount,
+  sessionTokens = 125500,
+  sessionCost = 0.18,
   onOpenGitModal,
   onOpenDiffModal,
   onOpenReportModal,
@@ -90,6 +95,14 @@ export const TopBar: React.FC<TopBarProps> = ({
         <div className="hud-pill timer-pill">
           <Clock size={12} className="pill-icon-cyan" />
           <span className="pill-mono-text">{formatElapsed(elapsedSec)}</span>
+        </div>
+
+        {/* Token / Cost Telemetry Pill */}
+        <div className="hud-pill token-pill" title="Cumulative session tokens and cost">
+          <Coins size={12} color="#f59e0b" />
+          <span className="pill-mono-text" style={{ color: '#f59e0b' }}>
+            {(sessionTokens / 1000).toFixed(1)}k tok • ${sessionCost.toFixed(2)}
+          </span>
         </div>
 
         {/* Hardware Status Gauges */}

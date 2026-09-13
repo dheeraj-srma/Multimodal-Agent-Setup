@@ -43,7 +43,18 @@ export interface AgentStatus {
   completedAt?: number;
   executionDurationMs: number;
   error?: string;
+  isBlocked?: boolean;
+  blockedBy?: AgentId[];
+  retryCount?: number;
+  lastError?: string;
+  promptTokens?: number;
+  completionTokens?: number;
+  totalCost?: number;
+  cpuPercent?: number;
+  memMb?: number;
 }
+
+export type EventTypeFilter = 'ALL' | 'STATUS' | 'MESSAGE' | 'TASK' | 'FILE' | 'ERROR' | 'CONFLICT';
 
 export type TaskStatus = 'PENDING' | 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'BLOCKED' | 'SKIPPED';
 

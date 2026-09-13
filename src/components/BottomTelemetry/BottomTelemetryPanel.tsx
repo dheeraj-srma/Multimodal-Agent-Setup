@@ -16,8 +16,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   Play,
+  Layers,
+  Coins,
 } from 'lucide-react';
-import { AgentEvent, GitStatusInfo } from '../../types';
+import { AgentEvent, GitStatusInfo, AgentId, EventTypeFilter } from '../../types';
+import { ROLE_COLORS } from '../../config/models';
 import './BottomTelemetryPanel.css';
 
 interface BottomTelemetryPanelProps {
@@ -25,51 +28,83 @@ interface BottomTelemetryPanelProps {
   activeAgentsCount: number;
   gitStatus?: GitStatusInfo;
   onOpenDiffModal?: () => void;
+  sessionTokens?: number;
+  sessionCost?: number;
 }
+
+const AGENT_RESOURCE_BREAKDOWN = [
+  { id: 'orchestrator' as AgentId, name: 'Gemini 1.5 Pro (Orchestrator)', cpu: 34, tokens: '48.2k', cost: '$0.00' },
+  { id: 'design' as AgentId, name: 'Claude 3.5 Sonnet (Design)', cpu: 26, tokens: '18.4k', cost: '$0.06' },
+  { id: 'coder' as AgentId, name: 'GPT-4o (Backend & Code)', cpu: 58, tokens: '32.1k', cost: '$0.10' },
+  { id: 'research' as AgentId, name: 'Perplexity Sonar (Research)', cpu: 19, tokens: '14.8k', cost: '$0.01' },
+  { id: 'tester' as AgentId, name: 'Llama 3.1 70B (Testing)', cpu: 22, tokens: '12.0k', cost: '$0.01' },
+];
 
 export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
   events,
   activeAgentsCount,
   gitStatus,
   onOpenDiffModal,
+  sessionTokens = 125500,
+  sessionCost = 0.18,
 }) => {
   const [activeTab, setActiveTab] = useState<'log' | 'files' | 'terminal' | 'git' | 'metrics'>('log');
   const [filterAgent, setFilterAgent] = useState('all');
+  const [filterType, setFilterType] = useState<EventTypeFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredAgentId, setHoveredAgentId] = useState<AgentId | null>(null);
+
   const [terminalInput, setTerminalInput] = useState('');
   const [terminalHistory, setTerminalHistory] = useState<string[]>([
-    'Antigravity Language Server v1.12.0 connected on PID 20264',
-    'Local Workspace Safety Lock initialized: 0 active conflicts',
-    'Swarm concurrent execution mode: Dynamic DAG Scheduler active',
-    'Type `help` or `status` to run local diagnostic command.',
+    'Antigravity Language Server v1.12.0 active on token authentication (zero cloud API key)',
+    'Dynamic DAG scheduler parallel execution pipeline initialized',
+    'Local Workspace Safety lock active: 0 file collisions',
+    'Type `help`, `status`, `tokens`, `agents` for diagnostics.',
   ]);
 
   const handleTerminalSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!terminalInput.trim()) return;
-    const cmd = terminalInput.trim();
-    setTerminalHistory((prev) => [
-      ...prev,
-      `$ ${cmd}`,
-      cmd === 'status'
-        ? `[OK] 4 Agents online • Local PID: 20264 • Antigravity native: OK • Memory: 68%`
-        : cmd === 'help'
-        ? `Available commands: status, models, git, clear, ping`
-        : cmd === 'clear'
-        ? ''
-        : cmd === 'ping'
-        ? `pong • latency 14ms`
-        : `Command executed: ${cmd}`,
-    ]);
+    const cmd = terminalInput.trim().toLowerCase();
+    let reply = `Executed: ${cmd}`;
+    if (cmd === 'status') {
+      reply = `[ONLINE] 4 Agents active • Antigravity PID 20264 • CPU 42% • RAM 68% • Safety Clean`;
+    } else if (cmd === 'tokens') {
+      reply = `[TOKENS] Session Cumulative: ${sessionTokens.toLocaleString()} tokens | Estimated Spend: $${sessionCost.toFixed(2)}`;
+    } else if (cmd === 'agents') {
+      reply = `[AGENTS] Orchestrator (Gemini 1.5 Pro), Design (Claude 3.5), Coder (GPT-4o), Research (Perplexity), Tester (Llama 3.1)`;
+    } else if (cmd === 'help') {
+      reply = `Commands: status, tokens, agents, ping, clear`;
+    } else if (cmd === 'ping') {
+      reply = `pong • Antigravity local daemon latency 12ms`;
+    } else if (cmd === 'clear') {
+      setTerminalHistory([]);
+      setTerminalInput('');
+      return;
+    }
+    setTerminalHistory((prev) => [...prev, `$ ${terminalInput.trim()}`, reply]);
     setTerminalInput('');
   };
 
   const filteredEvents = events.filter((ev) => {
+    // Filter by agent
     if (filterAgent !== 'all' && ev.agentId !== filterAgent) return false;
+
+    // Filter by event type
+    if (filterType !== 'ALL') {
+      if (filterType === 'STATUS' && ev.type !== 'AGENT_STATUS' && ev.type !== 'AGENT_PROGRESS') return false;
+      if (filterType === 'MESSAGE' && ev.type !== 'AGENT_MESSAGE') return false;
+      if (filterType === 'TASK' && !ev.type.startsWith('TASK_')) return false;
+      if (filterType === 'FILE' && ev.type !== 'FILE_CHANGED' && ev.type !== 'CONFLICT_DETECTED') return false;
+      if (filterType === 'ERROR' && ev.type !== 'TASK_FAILED' && !ev.type.includes('ERROR')) return false;
+    }
+
+    // Filter by search query
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
       ev.agentId.toLowerCase().includes(q) ||
+      ev.type.toLowerCase().includes(q) ||
       JSON.stringify(ev.payload).toLowerCase().includes(q)
     );
   });
@@ -116,21 +151,38 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
             onClick={() => setActiveTab('metrics')}
           >
             <BarChart3 size={12} />
-            <span>Metrics</span>
+            <span>System Metrics</span>
           </button>
         </div>
 
         <div className="btd-filters-row">
           {activeTab === 'log' && (
             <>
+              {/* Event Type Filter */}
               <div className="filter-dropdown-box">
                 <Filter size={11} className="dim-icon" />
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as EventTypeFilter)}
+                  className="dock-select"
+                >
+                  <option value="ALL">All Event Types</option>
+                  <option value="STATUS">State Transitions</option>
+                  <option value="MESSAGE">Inter-Agent Messages</option>
+                  <option value="TASK">Task Stages</option>
+                  <option value="FILE">File Modifications</option>
+                  <option value="ERROR">Errors & Retries</option>
+                </select>
+              </div>
+
+              {/* Agent Filter */}
+              <div className="filter-dropdown-box">
                 <select
                   value={filterAgent}
                   onChange={(e) => setFilterAgent(e.target.value)}
                   className="dock-select"
                 >
-                  <option value="all">Filter: All Agents</option>
+                  <option value="all">All Agents</option>
                   <option value="orchestrator">Gemini (Orchestrator)</option>
                   <option value="design">Claude (Design & UX)</option>
                   <option value="coder">GPT-4o (Backend & Code)</option>
@@ -139,17 +191,25 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
                 </select>
               </div>
 
+              {/* Search Box */}
               <div className="filter-search-box">
                 <Search size={11} className="dim-icon" />
                 <input
                   type="text"
-                  placeholder="Search logs..."
+                  placeholder="Search events..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="dock-search-input"
                 />
               </div>
             </>
+          )}
+
+          {activeTab === 'metrics' && (
+            <div className="metric-token-summary">
+              <Coins size={12} color="#f59e0b" />
+              <span>Session: <strong>{(sessionTokens / 1000).toFixed(1)}k tokens</strong> (${sessionCost.toFixed(2)})</span>
+            </div>
           )}
         </div>
       </div>
@@ -165,15 +225,15 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
                 <div className="sample-log-feed">
                   <div className="log-row">
                     <span className="lr-time">10:27:14</span>
-                    <span className="lr-model model-gemini">[Gemini]</span>
+                    <span className="lr-model" style={{ color: ROLE_COLORS.orchestrator }}>[Gemini]</span>
                     <span className="lr-arrow">→</span>
-                    <span className="lr-model model-gpt">[GPT-4o]</span>
-                    <span className="lr-text">Sent task: Implement authentication flow</span>
+                    <span className="lr-model" style={{ color: ROLE_COLORS.coder }}>[GPT-4o]</span>
+                    <span className="lr-text">Dispatched task: Implement portfolio auth flow</span>
                   </div>
 
                   <div className="log-row">
                     <span className="lr-time">10:27:12</span>
-                    <span className="lr-model model-claude">[Claude]</span>
+                    <span className="lr-model" style={{ color: ROLE_COLORS.design }}>[Claude]</span>
                     <span className="lr-text">
                       Modified <span className="lr-file">src/components/Navbar.tsx</span>{' '}
                       <span className="lr-diff">(+28 -4)</span>
@@ -182,48 +242,54 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
 
                   <div className="log-row">
                     <span className="lr-time">10:27:10</span>
-                    <span className="lr-model model-perplexity">[Perplexity]</span>
-                    <span className="lr-text">Found 12 relevant sources for "modern portfolio design 2024"</span>
+                    <span className="lr-model" style={{ color: ROLE_COLORS.research }}>[Perplexity]</span>
+                    <span className="lr-text">Synthesized 12 benchmark sources for "modern portfolio design 2024"</span>
                   </div>
 
                   <div className="log-row">
                     <span className="lr-time">10:27:08</span>
-                    <span className="lr-model model-llama">[Llama]</span>
-                    <span className="lr-text">Test result: 14/37 passed (2 failed, 1 skipped)</span>
+                    <span className="lr-model" style={{ color: ROLE_COLORS.tester }}>[Llama 3.1]</span>
+                    <span className="lr-text">Test suite pass: 14/37 completed (2 pending, 0 regression)</span>
                   </div>
 
                   <div className="log-row">
                     <span className="lr-time">10:27:05</span>
-                    <span className="lr-model model-gpt">[GPT-4o]</span>
-                    <span className="lr-text">Running npm run build...</span>
+                    <span className="lr-model" style={{ color: ROLE_COLORS.coder }}>[GPT-4o]</span>
+                    <span className="lr-text">Running safe TypeScript AST validation...</span>
                   </div>
 
                   <div className="log-row">
                     <span className="lr-time">10:27:02</span>
-                    <span className="lr-model model-gemini">[Gemini]</span>
-                    <span className="lr-text">Updated task graph. 4 agents running in parallel.</span>
+                    <span className="lr-model" style={{ color: ROLE_COLORS.orchestrator }}>[Gemini]</span>
+                    <span className="lr-text">Dynamic DAG resolved. 4 agents executing concurrently (2.95x multiplier).</span>
                   </div>
                 </div>
               ) : (
-                filteredEvents.slice(-20).map((ev) => (
-                  <div key={ev.id} className="log-row">
-                    <span className="lr-time">
-                      {new Date(ev.timestamp).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
-                      })}
-                    </span>
-                    <span className={`lr-model model-${ev.agentId}`}>[{ev.agentId.toUpperCase()}]</span>
-                    <span className="lr-text">
-                      {(ev.payload as any).message ||
-                        (ev.payload as any).currentAction ||
-                        (ev.payload as any).summary ||
-                        (ev.payload as any).title ||
-                        JSON.stringify(ev.payload).slice(0, 100)}
-                    </span>
-                  </div>
-                ))
+                filteredEvents.slice(-25).map((ev) => {
+                  const roleCol = ROLE_COLORS[ev.agentId as AgentId] || '#38bdf8';
+                  return (
+                    <div key={ev.id} className="log-row">
+                      <span className="lr-time">
+                        {new Date(ev.timestamp).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          second: '2-digit',
+                        })}
+                      </span>
+                      <span className="lr-model" style={{ color: roleCol }}>
+                        [{ev.agentId.toUpperCase()}]
+                      </span>
+                      <span className="lr-type-tag">{ev.type}</span>
+                      <span className="lr-text">
+                        {(ev.payload as any).message ||
+                          (ev.payload as any).currentAction ||
+                          (ev.payload as any).summary ||
+                          (ev.payload as any).title ||
+                          JSON.stringify(ev.payload).slice(0, 110)}
+                      </span>
+                    </div>
+                  );
+                })
               )}
             </div>
           )}
@@ -242,19 +308,12 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
                       <span className="file-path-text">{f}</span>
                       <span className="file-tag-mod">MODIFIED</span>
                       <button className="file-diff-btn" onClick={onOpenDiffModal}>
-                        View Diff
+                        Inspect Diff
                       </button>
                     </div>
                   ))
                 ) : (
                   <>
-                    <div className="file-item-row">
-                      <span className="file-path-text">src/components/Navbar.tsx</span>
-                      <span className="file-tag-mod">+28 -4</span>
-                      <button className="file-diff-btn" onClick={onOpenDiffModal}>
-                        Inspect Diff
-                      </button>
-                    </div>
                     <div className="file-item-row">
                       <span className="file-path-text">src/components/AgentGraph/AgentGraph.tsx</span>
                       <span className="file-tag-mod">+142 -12</span>
@@ -263,8 +322,15 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
                       </button>
                     </div>
                     <div className="file-item-row">
+                      <span className="file-path-text">src/components/LiveCommunication/LiveCommunicationPanel.tsx</span>
+                      <span className="file-tag-mod">+84 -6</span>
+                      <button className="file-diff-btn" onClick={onOpenDiffModal}>
+                        Inspect Diff
+                      </button>
+                    </div>
+                    <div className="file-item-row">
                       <span className="file-path-text">src/config/models.ts</span>
-                      <span className="file-tag-add">+84</span>
+                      <span className="file-tag-add">+62</span>
                       <button className="file-diff-btn" onClick={onOpenDiffModal}>
                         Inspect Diff
                       </button>
@@ -291,7 +357,7 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
                   value={terminalInput}
                   onChange={(e) => setTerminalInput(e.target.value)}
                   className="terminal-input-prompt"
-                  placeholder="Enter command (e.g. status, models, ping)..."
+                  placeholder="Enter diagnostic command (e.g. status, tokens, agents, ping)..."
                 />
               </form>
             </div>
@@ -301,7 +367,7 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
             <div className="btd-git-view">
               <div className="git-view-header">
                 <div className="git-branch-info">
-                  <GitBranch size={14} color="#00f0ff" />
+                  <GitBranch size={14} color="#38bdf8" />
                   <span>Branch: <strong>{gitStatus?.currentBranch || 'main'}</strong></span>
                 </div>
                 <div className="git-sync-status">
@@ -311,8 +377,8 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
               </div>
               <div className="git-commits-stream">
                 {(gitStatus?.recentCommits || [
-                  { hash: '7f9a12c', message: 'feat: add multi-model agent command center canvas', author: 'operator' },
-                  { hash: 'e3b4d89', message: 'refactor: integrate Antigravity native tokens & safety engine', author: 'operator' },
+                  { hash: '76e12bc', message: 'feat: add multi-model agent command center UI with cross-provider swarm', author: 'operator' },
+                  { hash: 'c38d784', message: 'feat: initial agent runtime and DAG execution engine', author: 'operator' },
                 ]).map((c, i) => (
                   <div key={i} className="git-commit-row">
                     <span className="commit-hash">{c.hash.slice(0, 7)}</span>
@@ -326,25 +392,55 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
 
           {activeTab === 'metrics' && (
             <div className="btd-full-metrics-view">
-              <div className="metric-card-box">
-                <span className="mc-title">Concurrency Multiplier</span>
-                <span className="mc-value mc-cyan">2.95x</span>
-                <span className="mc-sub">Parallel agent execution</span>
+              {/* Per-Agent Resource Attribution Table */}
+              <div className="metrics-agent-attribution-box">
+                <div className="ma-header">AGENT RESOURCE ATTRIBUTION</div>
+                <div className="ma-list">
+                  {AGENT_RESOURCE_BREAKDOWN.map((agent) => (
+                    <div
+                      key={agent.id}
+                      className="ma-item-row"
+                      style={{
+                        borderLeftColor: ROLE_COLORS[agent.id],
+                      }}
+                      onMouseEnter={() => setHoveredAgentId(agent.id)}
+                      onMouseLeave={() => setHoveredAgentId(null)}
+                    >
+                      <div className="ma-left">
+                        <span className="ma-name">{agent.name}</span>
+                      </div>
+                      <div className="ma-right">
+                        <span className="ma-cpu-chip">CPU {agent.cpu}%</span>
+                        <span className="ma-tok-chip">{agent.tokens} tok</span>
+                        <span className="ma-cost-chip">{agent.cost}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="metric-card-box">
-                <span className="mc-title">Tokens / Second</span>
-                <span className="mc-value mc-emerald">148 t/s</span>
-                <span className="mc-sub">Across 4 workers</span>
-              </div>
-              <div className="metric-card-box">
-                <span className="mc-title">Active Conflicts</span>
-                <span className="mc-value mc-amber">0</span>
-                <span className="mc-sub">Safety guard clean</span>
-              </div>
-              <div className="metric-card-box">
-                <span className="mc-title">Execution Mode</span>
-                <span className="mc-value mc-purple">Local Daemon</span>
-                <span className="mc-sub">PID 20264 Native</span>
+
+              {/* High Level Cards */}
+              <div className="metrics-high-level-cards">
+                <div className="metric-card-box">
+                  <span className="mc-title">Concurrency Multiplier</span>
+                  <span className="mc-value mc-cyan">2.95x</span>
+                  <span className="mc-sub">True parallel execution</span>
+                </div>
+                <div className="metric-card-box">
+                  <span className="mc-title">Throughput Speed</span>
+                  <span className="mc-value mc-emerald">164 t/s</span>
+                  <span className="mc-sub">4 active workers</span>
+                </div>
+                <div className="metric-card-box">
+                  <span className="mc-title">Collision Rate</span>
+                  <span className="mc-value mc-amber">0.0%</span>
+                  <span className="mc-sub">Workspace safety clean</span>
+                </div>
+                <div className="metric-card-box">
+                  <span className="mc-title">Local Daemon</span>
+                  <span className="mc-value mc-purple">PID 20264</span>
+                  <span className="mc-sub">Zero-API-key mode</span>
+                </div>
               </div>
             </div>
           )}
@@ -389,13 +485,13 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
               <path
                 d="M 0,20 Q 20,5 40,15 T 80,10 T 120,22 T 160,8 T 200,18 T 240,12"
                 fill="none"
-                stroke="#00f0ff"
+                stroke="#38bdf8"
                 strokeWidth="2"
               />
               <path
                 d="M 0,22 Q 30,12 60,25 T 120,15 T 180,24 T 240,16"
                 fill="none"
-                stroke="#8a2be2"
+                stroke="#c084fc"
                 strokeWidth="1.5"
                 opacity="0.6"
               />
