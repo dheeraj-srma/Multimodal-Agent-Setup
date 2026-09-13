@@ -1,0 +1,255 @@
+.agent-inspector-drawer {
+  position: fixed;
+  top: var(--topbar-height);
+  right: 0;
+  bottom: var(--terminal-height);
+  width: 380px;
+  background: var(--bg-surface-elevated);
+  border-left: 1px solid var(--border-subtle);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  animation: slide-in 0.2s ease-out;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.inspector-header {
+  height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-dim);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.insp-identity {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.insp-role {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.insp-agent-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--telemetry-cyan);
+}
+
+.insp-close-btn {
+  background: transparent;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.insp-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.insp-controls-bar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.insp-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 0;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.btn-cyan {
+  background: rgba(0, 240, 255, 0.15);
+  border: 1px solid var(--telemetry-cyan);
+  color: var(--telemetry-cyan);
+}
+.btn-amber {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid var(--telemetry-amber);
+  color: var(--telemetry-amber);
+}
+.btn-rose {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid var(--telemetry-rose);
+  color: var(--telemetry-rose);
+}
+
+.inspector-scroll-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.insp-section-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.insp-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+
+.insp-metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.metric-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-dim);
+  border-radius: 4px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mb-label {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+.mb-value {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.active-task-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.at-title {
+  font-size: 12px;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.at-action {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--telemetry-cyan);
+  display: flex;
+  gap: 6px;
+}
+
+.at-action-tag {
+  color: var(--text-muted);
+}
+
+.directive-form {
+  display: flex;
+  gap: 6px;
+}
+
+.directive-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: #fff;
+  font-size: 11px;
+}
+
+.directive-input:focus {
+  border-color: var(--telemetry-cyan);
+}
+
+.directive-send-btn {
+  background: var(--telemetry-cyan);
+  color: #06090e;
+  border-radius: 4px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.directive-send-btn:disabled {
+  opacity: 0.4;
+}
+
+.insp-logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.insp-log-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.il-time {
+  color: var(--text-dim);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.il-type {
+  color: var(--telemetry-cyan);
+  white-space: nowrap;
+}
+
+.il-msg {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-logs {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+}

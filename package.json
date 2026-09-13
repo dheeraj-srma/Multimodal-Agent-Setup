@@ -1,0 +1,37 @@
+{
+  "name": "agent-command-center",
+  "version": "1.0.0",
+  "description": "Visual mission-control interface for running and coordinating multiple AI coding/research agents in parallel",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build && tsc -p tsconfig.electron.json",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "preview": "vite preview",
+    "start": "electron .",
+    "desktop": "concurrently -k \"npm run dev\" \"wait-on http://localhost:5173 && electron .\"",
+    "test": "node scripts/test-runner.mjs"
+  },
+  "keywords": ["ai", "agents", "swarm", "command-center", "electron", "react"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "diff": "^7.0.0",
+    "lucide-react": "^1.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.2",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "wait-on": "^8.0.1"
+  }
+}

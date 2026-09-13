@@ -1,0 +1,126 @@
+.mission-input-card {
+  background: var(--bg-surface-glass);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 16px;
+}
+
+.mission-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mission-prompt-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--telemetry-cyan);
+}
+
+.sparkle-icon {
+  color: var(--telemetry-cyan);
+}
+
+.preset-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preset-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.chip-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.chip-btn:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.12);
+  border-color: var(--telemetry-cyan);
+  color: #fff;
+}
+
+.mission-input-wrapper {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.mission-textarea {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: none;
+  transition: border-color 0.2s ease;
+}
+
+.mission-textarea:focus {
+  border-color: var(--telemetry-cyan);
+  box-shadow: 0 0 10px var(--telemetry-cyan-glow);
+}
+
+.run-mission-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 24px;
+  background: linear-gradient(135deg, #00f0ff, #0099ff);
+  color: #06090e;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  border-radius: 6px;
+  box-shadow: 0 0 16px var(--telemetry-cyan-glow);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.run-mission-btn:hover:not(:disabled) {
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.6);
+  transform: translateY(-1px);
+}
+
+.run-mission-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-executing {
+  background: rgba(0, 240, 255, 0.15);
+  border: 1px solid var(--telemetry-cyan);
+  color: var(--telemetry-cyan);
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

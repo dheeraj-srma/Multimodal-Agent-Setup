@@ -1,0 +1,101 @@
+.agent-graph-container {
+  background: var(--bg-surface-glass);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.graph-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.graph-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.graph-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.agent-graph-svg {
+  width: 100%;
+  height: 330px;
+  display: block;
+}
+
+.channel-line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 6;
+  animation: march-dash 30s linear infinite;
+}
+
+.packet-travel-path {
+  fill: none;
+  stroke-width: 2;
+  opacity: 0.4;
+}
+
+.travelling-dot {
+  animation: travel-packet 1.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.graph-node {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.graph-node:hover {
+  transform: scale(1.04);
+}
+
+.node-box {
+  fill: rgba(14, 21, 35, 0.94);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
+  transition: all 0.2s ease;
+}
+
+.graph-node:hover .node-box {
+  fill: rgba(20, 31, 52, 0.98);
+}
+
+.node-selected .node-box {
+  stroke-width: 2;
+}
+
+.node-title-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  fill: #fff;
+}
+
+.node-sublabel-text {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 500;
+  fill: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.node-state-text {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+}
