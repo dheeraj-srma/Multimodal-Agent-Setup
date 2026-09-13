@@ -2,6 +2,21 @@ export type AgentId = 'orchestrator' | 'design' | 'coder' | 'research' | 'tester
 
 export type AgentRole = 'Orchestrator' | 'Design Agent' | 'Coder Agent' | 'Research Agent' | 'Test / Review Agent';
 
+export type ModelProvider = 'google' | 'anthropic' | 'openai' | 'meta' | 'perplexity' | 'mistral' | 'local';
+
+export interface AIModelConfig {
+  id: string;
+  name: string;
+  provider: ModelProvider;
+  role: AgentRole;
+  agentId: AgentId;
+  badge: string;
+  color: string;
+  glowColor: string;
+  actionText: string;
+  statusBadgeText: string;
+}
+
 export type AgentState =
   | 'IDLE'
   | 'QUEUED'
