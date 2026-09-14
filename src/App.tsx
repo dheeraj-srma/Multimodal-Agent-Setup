@@ -315,6 +315,7 @@ export const App: React.FC = () => {
             onModelChange={handleModelChange}
             onTogglePauseAgent={handleTogglePauseAgent}
             onRetryAgent={handleRetryAgent}
+            mission={mission}
           />
 
           {/* Dynamic Views based on activeTab */}

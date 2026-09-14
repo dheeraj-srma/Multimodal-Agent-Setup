@@ -448,7 +448,14 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
 
         {/* Right Side: Live System Metrics Gauges & Waveform */}
         <div className="btd-metrics-panel">
-          <div className="bmp-title">SYSTEM HARDWARE METRICS</div>
+          <div className="bmp-header-row">
+            <div className="bmp-title-group">
+              <span className="telemetry-live-dot"></span>
+              <span className="bmp-title">SYSTEM HARDWARE METRICS</span>
+            </div>
+            <span className="bmp-rate-tag">164 t/s</span>
+          </div>
+
           <div className="bmp-gauges-row">
             {/* CPU Gauge */}
             <div className="gauge-item">
@@ -469,33 +476,54 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
             {/* Disk Gauge */}
             <div className="gauge-metric-item">
               <span className="gm-val">1.2 GB</span>
-              <span className="gauge-label">Disk</span>
+              <span className="gauge-label">NVMe Disk</span>
             </div>
 
             {/* Network Gauge */}
             <div className="gauge-metric-item">
               <span className="gm-val gm-cyan">↑ 12.4 MB/s</span>
-              <span className="gauge-label">Network</span>
+              <span className="gauge-label">I/O Network</span>
             </div>
           </div>
 
-          {/* Real-time telemetry waveform */}
-          <div className="telemetry-waveform-svg-box">
-            <svg viewBox="0 0 240 30" className="waveform-svg" preserveAspectRatio="none">
-              <path
-                d="M 0,20 Q 20,5 40,15 T 80,10 T 120,22 T 160,8 T 200,18 T 240,12"
-                fill="none"
-                stroke="#38bdf8"
-                strokeWidth="2"
-              />
-              <path
-                d="M 0,22 Q 30,12 60,25 T 120,15 T 180,24 T 240,16"
-                fill="none"
-                stroke="#c084fc"
-                strokeWidth="1.5"
-                opacity="0.6"
-              />
-            </svg>
+          {/* Real-time telemetry waveform - Cleanly Framed Oscilloscope (No Clipping) */}
+          <div className="telemetry-waveform-card">
+            <div className="waveform-card-meta">
+              <span className="wcm-label">LIVE BANDWIDTH HARMONIC</span>
+              <span className="wcm-val">0.0% COLLISION</span>
+            </div>
+            <div className="telemetry-waveform-svg-box">
+              <svg viewBox="0 0 300 36" className="waveform-svg" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="cyanWaveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
+                  </linearGradient>
+                </defs>
+                {/* Gradient area fill under curve */}
+                <path
+                  d="M 0,22 C 25,8 50,30 75,18 C 100,6 125,28 150,16 C 175,8 200,26 225,14 C 250,6 275,24 300,16 L 300,36 L 0,36 Z"
+                  fill="url(#cyanWaveGrad)"
+                />
+                {/* Primary Cyan Stroke Line */}
+                <path
+                  d="M 0,22 C 25,8 50,30 75,18 C 100,6 125,28 150,16 C 175,8 200,26 225,14 C 250,6 275,24 300,16"
+                  fill="none"
+                  stroke="#38bdf8"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+                {/* Secondary Purple Phase Line */}
+                <path
+                  d="M 0,26 C 30,14 60,32 90,20 C 120,10 150,28 180,18 C 210,12 240,26 270,16 C 285,12 295,20 300,18"
+                  fill="none"
+                  stroke="#c084fc"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  opacity="0.65"
+                />
+              </svg>
+            </div>
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { AgentId, AgentStatus, AgentEvent, AgentMessagePayload } from '../../types';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { AgentId, AgentStatus, AgentEvent, AgentMessagePayload, Mission } from '../../types';
 import {
   Sparkles,
   Sun,
@@ -46,6 +46,7 @@ interface AgentGraphProps {
   onModelChange?: (agentId: AgentId, modelId: string) => void;
   onTogglePauseAgent?: (agentId: AgentId) => void;
   onRetryAgent?: (agentId: AgentId) => void;
+  mission?: Mission;
 }
 
 interface DynamicPacket {
@@ -54,9 +55,10 @@ interface DynamicPacket {
   to: AgentId;
   color: string;
   label: string;
+  pathD: string;
 }
 
-// Hierarchical tiered node geometry
+// Hierarchical tiered node geometry with generous canvas margins
 const NODE_HIERARCHY: Record<
   AgentId,
   {
@@ -74,9 +76,9 @@ const NODE_HIERARCHY: Record<
 > = {
   orchestrator: {
     x: 500,
-    y: 92,
+    y: 88,
     w: 240,
-    h: 106,
+    h: 104,
     tier: 'apex',
     roleKey: 'Orchestrator',
     badges: ['Task Decomposed: 5 subtasks', 'Coordinating Swarm'],
@@ -85,8 +87,8 @@ const NODE_HIERARCHY: Record<
     sparkline: [22, 28, 35, 30, 42, 38, 45, 34],
   },
   design: {
-    x: 230,
-    y: 275,
+    x: 225,
+    y: 265,
     w: 204,
     h: 88,
     tier: 'mid',
@@ -97,8 +99,8 @@ const NODE_HIERARCHY: Record<
     sparkline: [15, 18, 22, 26, 32, 28, 24, 26],
   },
   coder: {
-    x: 770,
-    y: 275,
+    x: 775,
+    y: 265,
     w: 204,
     h: 88,
     tier: 'mid',
@@ -110,7 +112,7 @@ const NODE_HIERARCHY: Record<
   },
   research: {
     x: 350,
-    y: 470,
+    y: 462,
     w: 192,
     h: 82,
     tier: 'leaf',
@@ -122,7 +124,7 @@ const NODE_HIERARCHY: Record<
   },
   tester: {
     x: 650,
-    y: 470,
+    y: 462,
     w: 192,
     h: 82,
     tier: 'leaf',
@@ -135,24 +137,23 @@ const NODE_HIERARCHY: Record<
 };
 
 // Continuous connection paths
-const PIPELINE_PATHS = {
-  orchToDesign: 'M 500,145 C 410,180 290,200 230,231',
-  orchToCoder: 'M 500,145 C 590,180 710,200 770,231',
-  designToCoderLoop: 'M 332,254 C 440,208 560,208 668,254', // Bi-directional negotiation arc (upper)
-  coderToDesignLoop: 'M 668,296 C 560,342 440,342 332,296', // Bi-directional negotiation arc (lower)
-  designToResearch: 'M 230,319 C 230,395 285,435 350,449',
-  coderToTester: 'M 770,319 C 770,395 715,435 650,449',
-  researchToOrch: 'M 350,429 C 410,340 460,220 480,145',
-  testerToOrch: 'M 650,429 C 590,340 540,220 520,145',
+const PIPELINE_PATHS: Record<string, string> = {
+  orchToDesign: 'M 490,140 C 400,175 285,195 225,221',
+  orchToCoder: 'M 510,140 C 600,175 715,195 775,221',
+  designToCoderLoop: 'M 327,246 C 435,200 565,200 673,246', // Bi-directional negotiation arc (upper)
+  coderToDesignLoop: 'M 673,284 C 565,330 435,330 327,284', // Bi-directional negotiation arc (lower)
+  designToResearch: 'M 225,309 C 225,385 285,420 350,440',
+  coderToTester: 'M 775,309 C 775,385 715,420 650,440',
+  researchToOrch: 'M 350,421 C 410,335 460,215 480,140',
+  testerToOrch: 'M 650,421 C 590,335 540,215 520,140',
 };
 
-// Data transfer badge markers
+// Data transfer badge markers - Positioned in clear spans, with zero overlap with cards
 const DATA_BADGES = [
-  { text: 'Directive Dispatch • 12 KB/s', x: 340, y: 180, color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)' },
-  { text: 'Feature Implementation • 28 KB/s', x: 660, y: 180, color: '#34d399', bg: 'rgba(52, 211, 153, 0.12)' },
-  { text: 'Design Specs • 8 KB/s', x: 260, y: 382, color: '#c084fc', bg: 'rgba(192, 132, 252, 0.12)' },
-  { text: 'Verification Suite • 14 KB/s', x: 740, y: 382, color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.12)' },
-  { text: 'Convergence Feedback • 6 KB/s', x: 500, y: 442, color: '#fb923c', bg: 'rgba(251, 146, 60, 0.12)' },
+  { id: 'orchToDesign', text: 'Directive Dispatch • 12 KB/s', x: 335, y: 175, color: '#38bdf8' },
+  { id: 'orchToCoder', text: 'Feature Implementation • 28 KB/s', x: 665, y: 175, color: '#34d399' },
+  { id: 'designToResearch', text: 'Design Specs • 8 KB/s', x: 240, y: 380, color: '#c084fc' },
+  { id: 'coderToTester', text: 'Verification Suite • 14 KB/s', x: 760, y: 380, color: '#f43f5e' },
 ];
 
 export const AgentGraph: React.FC<AgentGraphProps> = ({
@@ -167,11 +168,48 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
   onModelChange,
   onTogglePauseAgent,
   onRetryAgent,
+  mission,
 }) => {
   const [dynamicPackets, setDynamicPackets] = useState<DynamicPacket[]>([]);
   const [hoveredAgentId, setHoveredAgentId] = useState<AgentId | null>(null);
   const [activeRationaleAgentId, setActiveRationaleAgentId] = useState<AgentId | null>(null);
   const processedEventIds = useRef<Set<string>>(new Set());
+
+  // Check if mission is actively running
+  const isMissionRunning = mission?.status === 'RUNNING';
+
+  // Determine active sequential communication channels based on active tasks
+  const activeChannels = useMemo(() => {
+    const active = new Set<string>();
+    if (!isMissionRunning) return active;
+
+    const tasks = mission?.tasks || [];
+    const runningTask = tasks.find((t) => t.status === 'RUNNING');
+    const runningAgent = runningTask?.agentId;
+
+    if (!runningTask || runningAgent === 'orchestrator') {
+      // Stage 1: Orchestrator is actively planning and dispatching initial directives
+      active.add('orchToDesign');
+      active.add('orchToCoder');
+    } else if (runningAgent === 'design') {
+      // Stage 2: Design is processing tokens and negotiating contract with Coder
+      active.add('designToCoderLoop');
+      active.add('coderToDesignLoop');
+      active.add('designToResearch');
+    } else if (runningAgent === 'coder') {
+      // Stage 3: Coder is implementing features and sending to Tester
+      active.add('coderToTester');
+      active.add('coderToDesignLoop');
+    } else if (runningAgent === 'tester') {
+      // Stage 4: Tester is auditing and reporting results back to Orchestrator
+      active.add('testerToOrch');
+    } else if (runningAgent === 'research') {
+      // Research findings flowing to Orchestrator
+      active.add('researchToOrch');
+    }
+
+    return active;
+  }, [isMissionRunning, mission?.tasks]);
 
   // Listen for real message/task events to trigger transient packets
   useEffect(() => {
@@ -183,29 +221,50 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
     if (latest.type === 'AGENT_MESSAGE') {
       const msg = latest.payload as AgentMessagePayload;
       if (msg.to !== 'broadcast' && NODE_HIERARCHY[msg.from] && NODE_HIERARCHY[msg.to]) {
-        addDynamicPacket(msg.from, msg.to, ROLE_COLORS[msg.from] || '#00f0ff', msg.subject);
+        const pathKey = getPathBetweenAgents(msg.from, msg.to);
+        if (pathKey && PIPELINE_PATHS[pathKey]) {
+          addDynamicPacket(msg.from, msg.to, ROLE_COLORS[msg.from] || '#00f0ff', msg.subject, PIPELINE_PATHS[pathKey]);
+        }
       }
     } else if (latest.type === 'TASK_CREATED') {
       const task = latest.payload as any;
       const tgt = task.agentId as AgentId;
       if (tgt && NODE_HIERARCHY[tgt]) {
-        addDynamicPacket('orchestrator', tgt, '#38bdf8', 'TASK');
+        const pathKey = getPathBetweenAgents('orchestrator', tgt);
+        if (pathKey && PIPELINE_PATHS[pathKey]) {
+          addDynamicPacket('orchestrator', tgt, '#38bdf8', 'TASK', PIPELINE_PATHS[pathKey]);
+        }
       }
     } else if (latest.type === 'TASK_COMPLETED') {
       const task = (latest.payload as any).task;
       const src = task?.agentId as AgentId;
       if (src && NODE_HIERARCHY[src]) {
-        addDynamicPacket(src, 'orchestrator', '#34d399', 'DONE');
+        const pathKey = getPathBetweenAgents(src, 'orchestrator');
+        if (pathKey && PIPELINE_PATHS[pathKey]) {
+          addDynamicPacket(src, 'orchestrator', '#34d399', 'DONE', PIPELINE_PATHS[pathKey]);
+        }
       }
     }
   }, [recentEvents]);
 
-  const addDynamicPacket = (from: AgentId, to: AgentId, color: string, label: string) => {
+  const getPathBetweenAgents = (from: AgentId, to: AgentId): string | null => {
+    if (from === 'orchestrator' && to === 'design') return 'orchToDesign';
+    if (from === 'orchestrator' && to === 'coder') return 'orchToCoder';
+    if (from === 'design' && to === 'coder') return 'designToCoderLoop';
+    if (from === 'coder' && to === 'design') return 'coderToDesignLoop';
+    if (from === 'design' && to === 'research') return 'designToResearch';
+    if (from === 'coder' && to === 'tester') return 'coderToTester';
+    if (from === 'research' && to === 'orchestrator') return 'researchToOrch';
+    if (from === 'tester' && to === 'orchestrator') return 'testerToOrch';
+    return null;
+  };
+
+  const addDynamicPacket = (from: AgentId, to: AgentId, color: string, label: string, pathD: string) => {
     const packetId = `pkt-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-    setDynamicPackets((prev) => [...prev.slice(-8), { id: packetId, from, to, color, label }]);
+    setDynamicPackets((prev) => [...prev.slice(-6), { id: packetId, from, to, color, label, pathD }]);
     setTimeout(() => {
       setDynamicPackets((prev) => prev.filter((p) => p.id !== packetId));
-    }, 1600);
+    }, 1400);
   };
 
   const getModelForAgent = (agentId: AgentId): DetailedAIModel => {
@@ -309,20 +368,20 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
 
         <div className="legend-group legend-telemetry-key">
           <div className="legend-item">
-            <span className="legend-flow-icon">●●●</span>
-            <span>Velocity = KB/s Throughput</span>
+            <span className="legend-flow-icon">●</span>
+            <span>{isMissionRunning ? 'Active Sequential Transfer' : 'Standby / Quiescent'}</span>
           </div>
           <div className="legend-divider">|</div>
           <div className="legend-item">
             <Repeat size={11} color="#c084fc" />
-            <span style={{ color: '#c084fc' }}>⟲ Bi-Directional Negotiation</span>
+            <span style={{ color: '#c084fc' }}>⟲ Spec Negotiation Loop</span>
           </div>
         </div>
       </div>
 
-      {/* Hero Graph Canvas */}
+      {/* Hero Graph Canvas with Generous Margin to Prevent Cutoff */}
       <div className="multi-agent-graph-canvas">
-        <svg className="mag-svg" viewBox="0 0 1000 570" preserveAspectRatio="xMidYMid meet">
+        <svg className="mag-svg" viewBox="0 0 1000 580" preserveAspectRatio="xMidYMid meet">
           <defs>
             {/* Ambient Radial Glows */}
             <radialGradient id="apexOrchGlow" cx="50%" cy="50%" r="50%">
@@ -386,121 +445,182 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
             </pattern>
           </defs>
 
-          {/* 1. Curved Spline Channels with Directional Role Gradients */}
+          {/* 1. Curved Spline Channels: Dim when idle, vividly animated when channel is active */}
           <g className="channels-layer">
-            <path id="pathOrchDesign" d={PIPELINE_PATHS.orchToDesign} stroke="url(#gradOrchDesign)" className="spline-channel sc-dynamic" />
-            <path id="pathOrchCoder" d={PIPELINE_PATHS.orchToCoder} stroke="url(#gradOrchCoder)" className="spline-channel sc-dynamic" />
+            <path
+              id="pathOrchDesign"
+              d={PIPELINE_PATHS.orchToDesign}
+              stroke="url(#gradOrchDesign)"
+              className={`spline-channel ${activeChannels.has('orchToDesign') ? 'sc-active-pulse' : 'sc-idle'}`}
+            />
+            <path
+              id="pathOrchCoder"
+              d={PIPELINE_PATHS.orchToCoder}
+              stroke="url(#gradOrchCoder)"
+              className={`spline-channel ${activeChannels.has('orchToCoder') ? 'sc-active-pulse' : 'sc-idle'}`}
+            />
             
             {/* Bi-Directional Negotiation Loop between Design and Coder */}
-            <path id="pathDesignCoderLoop" d={PIPELINE_PATHS.designToCoderLoop} stroke="url(#gradDesignCoder)" className="spline-channel sc-loop-upper" />
-            <path id="pathCoderDesignLoop" d={PIPELINE_PATHS.coderToDesignLoop} stroke="url(#gradCoderDesign)" className="spline-channel sc-loop-lower" />
+            <path
+              id="pathDesignCoderLoop"
+              d={PIPELINE_PATHS.designToCoderLoop}
+              stroke="url(#gradDesignCoder)"
+              className={`spline-channel sc-loop-upper ${activeChannels.has('designToCoderLoop') ? 'sc-active-pulse' : 'sc-idle'}`}
+            />
+            <path
+              id="pathCoderDesignLoop"
+              d={PIPELINE_PATHS.coderToDesignLoop}
+              stroke="url(#gradCoderDesign)"
+              className={`spline-channel sc-loop-lower ${activeChannels.has('coderToDesignLoop') ? 'sc-active-pulse' : 'sc-idle'}`}
+            />
 
-            <path id="pathDesignResearch" d={PIPELINE_PATHS.designToResearch} stroke="url(#gradDesignResearch)" className="spline-channel sc-dynamic" />
-            <path id="pathCoderTester" d={PIPELINE_PATHS.coderToTester} stroke="url(#gradCoderTester)" className="spline-channel sc-dynamic" />
-            <path id="pathResearchOrch" d={PIPELINE_PATHS.researchToOrch} stroke="url(#gradResearchOrch)" className="spline-channel sc-dynamic" />
-            <path id="pathTesterOrch" d={PIPELINE_PATHS.testerToOrch} stroke="url(#gradTesterOrch)" className="spline-channel sc-dynamic" />
+            <path
+              id="pathDesignResearch"
+              d={PIPELINE_PATHS.designToResearch}
+              stroke="url(#gradDesignResearch)"
+              className={`spline-channel ${activeChannels.has('designToResearch') ? 'sc-active-pulse' : 'sc-idle'}`}
+            />
+            <path
+              id="pathCoderTester"
+              d={PIPELINE_PATHS.coderToTester}
+              stroke="url(#gradCoderTester)"
+              className={`spline-channel ${activeChannels.has('coderToTester') ? 'sc-active-pulse' : 'sc-idle'}`}
+            />
+            <path
+              id="pathResearchOrch"
+              d={PIPELINE_PATHS.researchToOrch}
+              stroke="url(#gradResearchOrch)"
+              className={`spline-channel ${activeChannels.has('researchToOrch') ? 'sc-active-pulse' : 'sc-idle'}`}
+            />
+            <path
+              id="pathTesterOrch"
+              d={PIPELINE_PATHS.testerToOrch}
+              stroke="url(#gradTesterOrch)"
+              className={`spline-channel ${activeChannels.has('testerToOrch') ? 'sc-active-pulse' : 'sc-idle'}`}
+            />
           </g>
 
-          {/* 2. Throughput-Proportional Animated Flowing Dots */}
-          <g className="continuous-particles-layer">
-            {/* Orch -> Coder (28 KB/s High Throughput: 4 Fast Emerald Particles, dur=1.0s, staggered) */}
-            <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
-              <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0s" />
-            </circle>
-            <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
-              <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.25s" />
-            </circle>
-            <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
-              <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.5s" />
-            </circle>
-            <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
-              <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.75s" />
-            </circle>
+          {/* 2. Active Communication Particles: ONLY rendered when a task is actively running on that channel */}
+          {isMissionRunning && (
+            <g className="continuous-particles-layer">
+              {/* Stage 1: Orch -> Coder Active Transfer (28 KB/s) */}
+              {activeChannels.has('orchToCoder') && (
+                <>
+                  <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
+                    <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0s" />
+                  </circle>
+                  <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
+                    <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.3s" />
+                  </circle>
+                  <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
+                    <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.6s" />
+                  </circle>
+                </>
+              )}
 
-            {/* Coder -> Tester (14 KB/s Medium-High: 3 Rose Particles, dur=1.4s, staggered) */}
-            <circle r="3.8" fill="#f43f5e" filter="url(#packetGlow)">
-              <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0s" />
-            </circle>
-            <circle r="3.5" fill="#f43f5e" filter="url(#packetGlow)">
-              <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0.46s" />
-            </circle>
-            <circle r="3.8" fill="#f43f5e" filter="url(#packetGlow)">
-              <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0.92s" />
-            </circle>
+              {/* Stage 1: Orch -> Design Active Transfer (12 KB/s) */}
+              {activeChannels.has('orchToDesign') && (
+                <>
+                  <circle r="3.8" fill="#38bdf8" filter="url(#packetGlow)">
+                    <animateMotion dur="1.6s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} begin="0s" />
+                  </circle>
+                  <circle r="3.6" fill="#38bdf8" filter="url(#packetGlow)">
+                    <animateMotion dur="1.6s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} begin="0.8s" />
+                  </circle>
+                </>
+              )}
 
-            {/* Orch -> Design (12 KB/s Medium: 2 Cyan Particles, dur=1.7s, staggered) */}
-            <circle r="3.8" fill="#38bdf8" filter="url(#packetGlow)">
-              <animateMotion dur="1.7s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} begin="0s" />
-            </circle>
-            <circle r="3.8" fill="#38bdf8" filter="url(#packetGlow)">
-              <animateMotion dur="1.7s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} begin="0.85s" />
-            </circle>
+              {/* Stage 2: Design <-> Coder Spec Negotiation Loop */}
+              {activeChannels.has('designToCoderLoop') && (
+                <>
+                  <circle r="3.8" fill="#c084fc" filter="url(#packetGlow)">
+                    <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.designToCoderLoop} begin="0s" />
+                  </circle>
+                  <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
+                    <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToDesignLoop} begin="0s" />
+                  </circle>
+                </>
+              )}
 
-            {/* Bi-Directional Negotiation Particles: Design <-> Coder Counter-Flow */}
-            {/* Design -> Coder: Violet Flow along upper arc */}
-            <circle r="3.8" fill="#c084fc" filter="url(#packetGlow)">
-              <animateMotion dur="1.5s" repeatCount="indefinite" path={PIPELINE_PATHS.designToCoderLoop} begin="0s" />
-            </circle>
-            <circle r="3.4" fill="#c084fc" filter="url(#packetGlow)">
-              <animateMotion dur="1.5s" repeatCount="indefinite" path={PIPELINE_PATHS.designToCoderLoop} begin="0.75s" />
-            </circle>
+              {/* Stage 2: Design -> Research specs */}
+              {activeChannels.has('designToResearch') && (
+                <circle r="3.4" fill="#c084fc" filter="url(#packetGlow)">
+                  <animateMotion dur="2.0s" repeatCount="indefinite" path={PIPELINE_PATHS.designToResearch} begin="0s" />
+                </circle>
+              )}
 
-            {/* Coder -> Design: Emerald Flow along lower arc */}
-            <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
-              <animateMotion dur="1.5s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToDesignLoop} begin="0s" />
-            </circle>
-            <circle r="3.4" fill="#34d399" filter="url(#packetGlow)">
-              <animateMotion dur="1.5s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToDesignLoop} begin="0.75s" />
-            </circle>
+              {/* Stage 3: Coder -> Tester Implementation Transfer (14 KB/s) */}
+              {activeChannels.has('coderToTester') && (
+                <>
+                  <circle r="4.0" fill="#f43f5e" filter="url(#packetGlow)">
+                    <animateMotion dur="1.3s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0s" />
+                  </circle>
+                  <circle r="3.6" fill="#f43f5e" filter="url(#packetGlow)">
+                    <animateMotion dur="1.3s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0.55s" />
+                  </circle>
+                </>
+              )}
 
-            {/* Design -> Research (8 KB/s: 2 Violet Particles, dur=2.4s) */}
-            <circle r="3.2" fill="#c084fc" filter="url(#packetGlow)">
-              <animateMotion dur="2.4s" repeatCount="indefinite" path={PIPELINE_PATHS.designToResearch} begin="0s" />
-            </circle>
-            <circle r="3.2" fill="#c084fc" filter="url(#packetGlow)">
-              <animateMotion dur="2.4s" repeatCount="indefinite" path={PIPELINE_PATHS.designToResearch} begin="1.2s" />
-            </circle>
+              {/* Stage 4: Tester -> Orch Verification Feedback */}
+              {activeChannels.has('testerToOrch') && (
+                <circle r="3.5" fill="#f43f5e" filter="url(#packetGlow)">
+                  <animateMotion dur="2.4s" repeatCount="indefinite" path={PIPELINE_PATHS.testerToOrch} begin="0s" />
+                </circle>
+              )}
 
-            {/* Research -> Orch Feedback (6 KB/s: 1 Amber Particle, dur=3.2s) */}
-            <circle r="3.2" fill="#fb923c" filter="url(#packetGlow)">
-              <animateMotion dur="3.2s" repeatCount="indefinite" path={PIPELINE_PATHS.researchToOrch} begin="0s" />
-            </circle>
+              {/* Research -> Orch Feedback */}
+              {activeChannels.has('researchToOrch') && (
+                <circle r="3.5" fill="#fb923c" filter="url(#packetGlow)">
+                  <animateMotion dur="2.6s" repeatCount="indefinite" path={PIPELINE_PATHS.researchToOrch} begin="0s" />
+                </circle>
+              )}
+            </g>
+          )}
 
-            {/* Tester -> Orch Feedback (6 KB/s: 1 Rose Particle, dur=2.9s) */}
-            <circle r="3.2" fill="#f43f5e" filter="url(#packetGlow)">
-              <animateMotion dur="2.9s" repeatCount="indefinite" path={PIPELINE_PATHS.testerToOrch} begin="0s" />
-            </circle>
+          {/* 3. Real Event Transient Packets (In-Flight Messages & Task Handoffs) */}
+          <g className="transient-packets-layer">
+            {dynamicPackets.map((pkt) => (
+              <circle key={pkt.id} r="5" fill={pkt.color} filter="url(#packetGlow)">
+                <animateMotion dur="1.3s" fill="freeze" path={pkt.pathD} />
+              </circle>
+            ))}
           </g>
 
-          {/* 3. Central Bi-Directional Negotiation Loop Badge */}
-          <g transform="translate(500, 275)" className="negotiation-loop-badge-group">
+          {/* 4. Central Bi-Directional Negotiation Loop Badge */}
+          <g
+            transform="translate(500, 265)"
+            className={`negotiation-loop-badge-group ${activeChannels.has('designToCoderLoop') ? 'nlb-active' : 'nlb-idle'}`}
+          >
             <rect x="-115" y="-12" width="230" height="24" rx="12" className="negotiation-badge-pill" />
             <text x="0" y="4" className="negotiation-badge-text">
               ⟲ Spec Negotiation • 3 Cycles
             </text>
           </g>
 
-          {/* 4. Floating Data Transfer Volume Pills along Curves */}
+          {/* 5. Floating Data Transfer Volume Pills - Illuminated only when active */}
           <g className="data-badges-layer">
-            {DATA_BADGES.map((b, idx) => (
-              <g key={idx} transform={`translate(${b.x}, ${b.y})`}>
-                <rect x="-85" y="-11" width="170" height="22" rx="11" className="data-transfer-pill" />
-                <text x="0" y="4" className="data-transfer-text" style={{ fill: b.color }}>
-                  {b.text}
-                </text>
-              </g>
-            ))}
+            {DATA_BADGES.map((b) => {
+              const isActive = activeChannels.has(b.id);
+              return (
+                <g key={b.id} transform={`translate(${b.x}, ${b.y})`} className={`data-badge-group ${isActive ? 'badge-active' : 'badge-idle'}`}>
+                  <rect x="-85" y="-11" width="170" height="22" rx="11" className="data-transfer-pill" />
+                  <text x="0" y="4" className="data-transfer-text" style={{ fill: b.color }}>
+                    {b.text}
+                  </text>
+                </g>
+              );
+            })}
           </g>
 
-          {/* 5. Multi-Model Nodes with Tiered Hierarchy */}
+          {/* 6. Multi-Model Nodes with Tiered Hierarchy */}
           <g className="model-nodes-layer">
             {(Object.keys(NODE_HIERARCHY) as AgentId[]).map((agentId) => {
               const node = NODE_HIERARCHY[agentId];
               const roleColor = ROLE_COLORS[agentId];
               const roleGlow = ROLE_GLOWS[agentId];
               const status = statuses[agentId] || {
-                state: 'WORKING',
-                progress: agentId === 'orchestrator' ? 82 : agentId === 'design' ? 68 : agentId === 'coder' ? 74 : agentId === 'research' ? 58 : 42,
+                state: 'IDLE',
+                progress: 0,
               };
               const isSelected = selectedAgentId === agentId;
               const isHovered = hoveredAgentId === agentId;
@@ -529,7 +649,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                   key={agentId}
                   className={`swarm-node-group node-tier-${node.tier} ${isSelected ? 'node-active-selected' : ''} ${
                     isBlocked ? 'node-state-blocked' : ''
-                  } ${isFailed ? 'node-state-failed' : ''}`}
+                  } ${isFailed ? 'node-state-failed' : ''} ${isWorking ? 'node-actively-working' : ''}`}
                   transform={`translate(${node.x}, ${node.y})`}
                   onClick={() => onSelectAgent(agentId)}
                   onMouseEnter={() => setHoveredAgentId(agentId)}
@@ -684,7 +804,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                     strokeLinecap="round"
                   />
 
-                  {/* Mini Token/Burn Sparkline Bar (Spike Visualizer) */}
+                  {/* Mini Token/Burn Sparkline Bar */}
                   <g transform={`translate(${-halfW + 16}, ${halfH - 22})`}>
                     <g className="mini-node-sparkline">
                       {node.sparkline.map((val, sIdx) => {
