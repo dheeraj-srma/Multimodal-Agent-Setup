@@ -259,10 +259,13 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
         const clickedId = dragStartRef.current.agentId;
         onSelectAgent(clickedId === selectedAgentId ? undefined : clickedId);
       }
-    } else {
-      // Clicked on empty SVG canvas background - deselect agent to dismiss floating menu
-      onSelectAgent(undefined);
+      dragStartRef.current = null;
+      setDraggingAgentId(null);
     }
+  };
+
+  // Safe mouse leave handler: cleans up drag states without closing the opened floating menu
+  const handleSVGMouseLeave = () => {
     dragStartRef.current = null;
     setDraggingAgentId(null);
   };
@@ -667,7 +670,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
           preserveAspectRatio="xMidYMid meet"
           onMouseMove={handleSVGMouseMove}
           onMouseUp={handleSVGMouseUp}
-          onMouseLeave={handleSVGMouseUp}
+          onMouseLeave={handleSVGMouseLeave}
         >
           <defs>
             {/* Ambient Radial Glows */}

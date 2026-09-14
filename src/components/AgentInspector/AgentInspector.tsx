@@ -124,7 +124,11 @@ export const AgentInspector: React.FC<AgentInspectorProps> = ({
           : undefined
       }
       onMouseDown={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
+      onMouseEnter={(e) => e.stopPropagation()}
+      onMouseMove={(e) => e.stopPropagation()}
+      onMouseLeave={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div className="inspector-header" style={{ borderBottomColor: roleColor }}>
