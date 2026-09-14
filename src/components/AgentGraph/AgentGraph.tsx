@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { AgentId, AgentStatus, AgentEvent, AgentMessagePayload, Mission } from '../../types';
 import {
   Sparkles,
@@ -22,6 +22,8 @@ import {
   ArrowRight,
   ShieldCheck,
   Coins,
+  Move,
+  Grid,
 } from 'lucide-react';
 import {
   ModelTopologyMode,
@@ -58,12 +60,19 @@ interface DynamicPacket {
   pathD: string;
 }
 
-// Hierarchical tiered node geometry with generous canvas margins
-const NODE_HIERARCHY: Record<
+// Default layout coordinates (NASA Mission Control hierarchy)
+export const DEFAULT_NODE_POSITIONS: Record<AgentId, { x: number; y: number }> = {
+  orchestrator: { x: 500, y: 88 },
+  design: { x: 225, y: 265 },
+  coder: { x: 775, y: 265 },
+  research: { x: 350, y: 462 },
+  tester: { x: 650, y: 462 },
+};
+
+// Hierarchical tiered node geometry specs
+const NODE_METADATA: Record<
   AgentId,
   {
-    x: number;
-    y: number;
     w: number;
     h: number;
     tier: 'apex' | 'mid' | 'leaf';
@@ -75,8 +84,6 @@ const NODE_HIERARCHY: Record<
   }
 > = {
   orchestrator: {
-    x: 500,
-    y: 88,
     w: 240,
     h: 104,
     tier: 'apex',
@@ -87,8 +94,6 @@ const NODE_HIERARCHY: Record<
     sparkline: [22, 28, 35, 30, 42, 38, 45, 34],
   },
   design: {
-    x: 225,
-    y: 265,
     w: 204,
     h: 88,
     tier: 'mid',
@@ -99,8 +104,6 @@ const NODE_HIERARCHY: Record<
     sparkline: [15, 18, 22, 26, 32, 28, 24, 26],
   },
   coder: {
-    x: 775,
-    y: 265,
     w: 204,
     h: 88,
     tier: 'mid',
@@ -111,8 +114,6 @@ const NODE_HIERARCHY: Record<
     sparkline: [30, 44, 52, 68, 74, 62, 55, 58],
   },
   research: {
-    x: 350,
-    y: 462,
     w: 192,
     h: 82,
     tier: 'leaf',
@@ -123,8 +124,6 @@ const NODE_HIERARCHY: Record<
     sparkline: [10, 14, 18, 25, 20, 18, 22, 19],
   },
   tester: {
-    x: 650,
-    y: 462,
     w: 192,
     h: 82,
     tier: 'leaf',
@@ -135,26 +134,6 @@ const NODE_HIERARCHY: Record<
     sparkline: [12, 16, 20, 28, 32, 26, 24, 22],
   },
 };
-
-// Continuous connection paths
-const PIPELINE_PATHS: Record<string, string> = {
-  orchToDesign: 'M 490,140 C 400,175 285,195 225,221',
-  orchToCoder: 'M 510,140 C 600,175 715,195 775,221',
-  designToCoderLoop: 'M 327,246 C 435,200 565,200 673,246', // Bi-directional negotiation arc (upper)
-  coderToDesignLoop: 'M 673,284 C 565,330 435,330 327,284', // Bi-directional negotiation arc (lower)
-  designToResearch: 'M 225,309 C 225,385 285,420 350,440',
-  coderToTester: 'M 775,309 C 775,385 715,420 650,440',
-  researchToOrch: 'M 350,421 C 410,335 460,215 480,140',
-  testerToOrch: 'M 650,421 C 590,335 540,215 520,140',
-};
-
-// Data transfer badge markers - Positioned in clear spans, with zero overlap with cards
-const DATA_BADGES = [
-  { id: 'orchToDesign', text: 'Directive Dispatch • 12 KB/s', x: 335, y: 175, color: '#38bdf8' },
-  { id: 'orchToCoder', text: 'Feature Implementation • 28 KB/s', x: 665, y: 175, color: '#34d399' },
-  { id: 'designToResearch', text: 'Design Specs • 8 KB/s', x: 240, y: 380, color: '#c084fc' },
-  { id: 'coderToTester', text: 'Verification Suite • 14 KB/s', x: 760, y: 380, color: '#f43f5e' },
-];
 
 export const AgentGraph: React.FC<AgentGraphProps> = ({
   statuses,
@@ -170,6 +149,24 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
   onRetryAgent,
   mission,
 }) => {
+  // Node positions in state for smooth drag-and-drop & auto-arrange
+  const [nodePositions, setNodePositions] = useState<Record<AgentId, { x: number; y: number }>>(() => ({
+    ...DEFAULT_NODE_POSITIONS,
+  }));
+
+  // Dragging state
+  const [draggingAgentId, setDraggingAgentId] = useState<AgentId | null>(null);
+  const [isAutoArranging, setIsAutoArranging] = useState(false);
+  const dragStartRef = useRef<{
+    agentId: AgentId;
+    svgStartX: number;
+    svgStartY: number;
+    nodeStartX: number;
+    nodeStartY: number;
+    hasMoved: boolean;
+  } | null>(null);
+
+  const svgRef = useRef<SVGSVGElement>(null);
   const [dynamicPackets, setDynamicPackets] = useState<DynamicPacket[]>([]);
   const [hoveredAgentId, setHoveredAgentId] = useState<AgentId | null>(null);
   const [activeRationaleAgentId, setActiveRationaleAgentId] = useState<AgentId | null>(null);
@@ -177,6 +174,172 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
 
   // Check if mission is actively running
   const isMissionRunning = mission?.status === 'RUNNING';
+
+  // Check if layout has been custom readjusted
+  const isLayoutModified = useMemo(() => {
+    return (Object.keys(DEFAULT_NODE_POSITIONS) as AgentId[]).some(
+      (k) =>
+        nodePositions[k].x !== DEFAULT_NODE_POSITIONS[k].x ||
+        nodePositions[k].y !== DEFAULT_NODE_POSITIONS[k].y
+    );
+  }, [nodePositions]);
+
+  // Auto Arrange Button Handler: Resets node positions to default arrangement
+  const handleAutoArrange = () => {
+    setIsAutoArranging(true);
+    setNodePositions({ ...DEFAULT_NODE_POSITIONS });
+    setTimeout(() => setIsAutoArranging(false), 450);
+  };
+
+  // Convert client mouse coordinates to pixel-perfect SVG viewBox coordinates
+  const getSVGCoords = useCallback((clientX: number, clientY: number): { x: number; y: number } => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 500, y: 250 };
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 500, y: 250 };
+    const transformed = pt.matrixTransform(ctm.inverse());
+    return { x: Math.round(transformed.x), y: Math.round(transformed.y) };
+  }, []);
+
+  // Node Drag Handlers
+  const handleNodeMouseDown = (e: React.MouseEvent, agentId: AgentId) => {
+    // Only drag on primary left click
+    if (e.button !== 0) return;
+    e.stopPropagation();
+
+    const svgCoord = getSVGCoords(e.clientX, e.clientY);
+    const nodePos = nodePositions[agentId];
+
+    dragStartRef.current = {
+      agentId,
+      svgStartX: svgCoord.x,
+      svgStartY: svgCoord.y,
+      nodeStartX: nodePos.x,
+      nodeStartY: nodePos.y,
+      hasMoved: false,
+    };
+    setDraggingAgentId(agentId);
+  };
+
+  const handleSVGMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!dragStartRef.current) return;
+    const { agentId, svgStartX, svgStartY, nodeStartX, nodeStartY } = dragStartRef.current;
+    const currentCoord = getSVGCoords(e.clientX, e.clientY);
+
+    const dx = currentCoord.x - svgStartX;
+    const dy = currentCoord.y - svgStartY;
+
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      dragStartRef.current.hasMoved = true;
+    }
+
+    // Clamp coordinates within visible SVG canvas area (with margin for card dimensions)
+    const clampedX = Math.max(125, Math.min(875, nodeStartX + dx));
+    const clampedY = Math.max(60, Math.min(520, nodeStartY + dy));
+
+    setNodePositions((prev) => ({
+      ...prev,
+      [agentId]: { x: clampedX, y: clampedY },
+    }));
+  };
+
+  const handleSVGMouseUp = () => {
+    if (dragStartRef.current) {
+      // If it wasn't a significant drag, treat as a selection click
+      if (!dragStartRef.current.hasMoved) {
+        onSelectAgent(dragStartRef.current.agentId);
+      }
+    }
+    dragStartRef.current = null;
+    setDraggingAgentId(null);
+  };
+
+  // Dynamically compute continuous connection spline paths based on current nodePositions
+  const pipelinePaths = useMemo(() => {
+    const orch = nodePositions.orchestrator;
+    const design = nodePositions.design;
+    const coder = nodePositions.coder;
+    const research = nodePositions.research;
+    const tester = nodePositions.tester;
+
+    const orchToDesign = `M ${orch.x - 15},${orch.y + 52} C ${(orch.x + design.x) / 2},${orch.y + 70} ${design.x + 20},${design.y - 60} ${design.x},${design.y - 44}`;
+    const orchToCoder = `M ${orch.x + 15},${orch.y + 52} C ${(orch.x + coder.x) / 2},${orch.y + 70} ${coder.x - 20},${coder.y - 60} ${coder.x},${coder.y - 44}`;
+
+    // Negotiation loops between Design and Coder
+    const midX = (design.x + coder.x) / 2;
+    const midYUpper = Math.min(design.y, coder.y) - 60;
+    const designToCoderLoop = `M ${design.x + 102},${design.y - 16} C ${design.x + (midX - design.x) * 0.7},${midYUpper} ${coder.x - (coder.x - midX) * 0.7},${midYUpper} ${coder.x - 102},${coder.y - 16}`;
+
+    const midYLower = Math.max(design.y, coder.y) + 60;
+    const coderToDesignLoop = `M ${coder.x - 102},${coder.y + 16} C ${coder.x - (coder.x - midX) * 0.7},${midYLower} ${design.x + (midX - design.x) * 0.7},${midYLower} ${design.x + 102},${design.y + 16}`;
+
+    const designToResearch = `M ${design.x},${design.y + 44} C ${design.x},${(design.y + research.y) / 2} ${(design.x + research.x) / 2},${research.y - 60} ${research.x},${research.y - 41}`;
+    const coderToTester = `M ${coder.x},${coder.y + 44} C ${coder.x},${(coder.y + tester.y) / 2} ${(coder.x + tester.x) / 2},${tester.y - 60} ${tester.x},${tester.y - 41}`;
+    const researchToOrch = `M ${research.x},${research.y - 41} C ${research.x + 50},${(research.y + orch.y) / 2} ${orch.x - 50},${orch.y + 110} ${orch.x - 25},${orch.y + 52}`;
+    const testerToOrch = `M ${tester.x},${tester.y - 41} C ${tester.x - 50},${(tester.y + orch.y) / 2} ${orch.x + 50},${orch.y + 110} ${orch.x + 25},${orch.y + 52}`;
+
+    return {
+      orchToDesign,
+      orchToCoder,
+      designToCoderLoop,
+      coderToDesignLoop,
+      designToResearch,
+      coderToTester,
+      researchToOrch,
+      testerToOrch,
+    };
+  }, [nodePositions]);
+
+  // Dynamically compute non-overlapping data transfer badge coordinates
+  const dataBadges = useMemo(() => {
+    const orch = nodePositions.orchestrator;
+    const design = nodePositions.design;
+    const coder = nodePositions.coder;
+    const research = nodePositions.research;
+    const tester = nodePositions.tester;
+
+    return [
+      {
+        id: 'orchToDesign',
+        text: 'Directive Dispatch • 12 KB/s',
+        x: Math.round((orch.x + design.x) / 2 - 12),
+        y: Math.round((orch.y + design.y) / 2 + 8),
+        color: '#38bdf8',
+      },
+      {
+        id: 'orchToCoder',
+        text: 'Feature Implementation • 28 KB/s',
+        x: Math.round((orch.x + coder.x) / 2 + 12),
+        y: Math.round((orch.y + coder.y) / 2 + 8),
+        color: '#34d399',
+      },
+      {
+        id: 'designToResearch',
+        text: 'Design Specs • 8 KB/s',
+        x: Math.round((design.x + research.x) / 2 - 32),
+        y: Math.round((design.y + research.y) / 2 + 15),
+        color: '#c084fc',
+      },
+      {
+        id: 'coderToTester',
+        text: 'Verification Suite • 14 KB/s',
+        x: Math.round((coder.x + tester.x) / 2 + 32),
+        y: Math.round((coder.y + tester.y) / 2 + 15),
+        color: '#f43f5e',
+      },
+    ];
+  }, [nodePositions]);
+
+  // Midpoint position for the bi-directional negotiation badge
+  const negotiationBadgePos = useMemo(() => {
+    return {
+      x: Math.round((nodePositions.design.x + nodePositions.coder.x) / 2),
+      y: Math.round((nodePositions.design.y + nodePositions.coder.y) / 2),
+    };
+  }, [nodePositions.design, nodePositions.coder]);
 
   // Determine active sequential communication channels based on active tasks
   const activeChannels = useMemo(() => {
@@ -220,43 +383,43 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
 
     if (latest.type === 'AGENT_MESSAGE') {
       const msg = latest.payload as AgentMessagePayload;
-      if (msg.to !== 'broadcast' && NODE_HIERARCHY[msg.from] && NODE_HIERARCHY[msg.to]) {
-        const pathKey = getPathBetweenAgents(msg.from, msg.to);
-        if (pathKey && PIPELINE_PATHS[pathKey]) {
-          addDynamicPacket(msg.from, msg.to, ROLE_COLORS[msg.from] || '#00f0ff', msg.subject, PIPELINE_PATHS[pathKey]);
+      if (msg.to !== 'broadcast' && nodePositions[msg.from] && nodePositions[msg.to]) {
+        const pathD = getDynamicPath(msg.from, msg.to);
+        if (pathD) {
+          addDynamicPacket(msg.from, msg.to, ROLE_COLORS[msg.from] || '#00f0ff', msg.subject, pathD);
         }
       }
     } else if (latest.type === 'TASK_CREATED') {
       const task = latest.payload as any;
       const tgt = task.agentId as AgentId;
-      if (tgt && NODE_HIERARCHY[tgt]) {
-        const pathKey = getPathBetweenAgents('orchestrator', tgt);
-        if (pathKey && PIPELINE_PATHS[pathKey]) {
-          addDynamicPacket('orchestrator', tgt, '#38bdf8', 'TASK', PIPELINE_PATHS[pathKey]);
+      if (tgt && nodePositions[tgt]) {
+        const pathD = getDynamicPath('orchestrator', tgt);
+        if (pathD) {
+          addDynamicPacket('orchestrator', tgt, '#38bdf8', 'TASK', pathD);
         }
       }
     } else if (latest.type === 'TASK_COMPLETED') {
       const task = (latest.payload as any).task;
       const src = task?.agentId as AgentId;
-      if (src && NODE_HIERARCHY[src]) {
-        const pathKey = getPathBetweenAgents(src, 'orchestrator');
-        if (pathKey && PIPELINE_PATHS[pathKey]) {
-          addDynamicPacket(src, 'orchestrator', '#34d399', 'DONE', PIPELINE_PATHS[pathKey]);
+      if (src && nodePositions[src]) {
+        const pathD = getDynamicPath(src, 'orchestrator');
+        if (pathD) {
+          addDynamicPacket(src, 'orchestrator', '#34d399', 'DONE', pathD);
         }
       }
     }
-  }, [recentEvents]);
+  }, [recentEvents, nodePositions]);
 
-  const getPathBetweenAgents = (from: AgentId, to: AgentId): string | null => {
-    if (from === 'orchestrator' && to === 'design') return 'orchToDesign';
-    if (from === 'orchestrator' && to === 'coder') return 'orchToCoder';
-    if (from === 'design' && to === 'coder') return 'designToCoderLoop';
-    if (from === 'coder' && to === 'design') return 'coderToDesignLoop';
-    if (from === 'design' && to === 'research') return 'designToResearch';
-    if (from === 'coder' && to === 'tester') return 'coderToTester';
-    if (from === 'research' && to === 'orchestrator') return 'researchToOrch';
-    if (from === 'tester' && to === 'orchestrator') return 'testerToOrch';
-    return null;
+  const getDynamicPath = (from: AgentId, to: AgentId): string | null => {
+    if (from === 'orchestrator' && to === 'design') return pipelinePaths.orchToDesign;
+    if (from === 'orchestrator' && to === 'coder') return pipelinePaths.orchToCoder;
+    if (from === 'design' && to === 'coder') return pipelinePaths.designToCoderLoop;
+    if (from === 'coder' && to === 'design') return pipelinePaths.coderToDesignLoop;
+    if (from === 'design' && to === 'research') return pipelinePaths.designToResearch;
+    if (from === 'coder' && to === 'tester') return pipelinePaths.coderToTester;
+    if (from === 'research' && to === 'orchestrator') return pipelinePaths.researchToOrch;
+    if (from === 'tester' && to === 'orchestrator') return pipelinePaths.testerToOrch;
+    return `M ${nodePositions[from].x},${nodePositions[from].y} L ${nodePositions[to].x},${nodePositions[to].y}`;
   };
 
   const addDynamicPacket = (from: AgentId, to: AgentId, color: string, label: string, pathD: string) => {
@@ -333,6 +496,16 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
         </div>
 
         <div className="gtb-right">
+          {/* Auto Arrange Button: Resets node positions to default layout */}
+          <button
+            className={`gtb-auto-arrange-btn ${isLayoutModified ? 'btn-layout-modified' : ''}`}
+            onClick={handleAutoArrange}
+            title="Reset agent nodes to original layout"
+          >
+            <RotateCcw size={12} className={isAutoArranging ? 'spin-icon' : ''} />
+            <span>{isLayoutModified ? 'Auto Arrange (Reset)' : 'Auto Arrange'}</span>
+          </button>
+
           <button className="gtb-config-btn" onClick={onOpenModelConfig} title="Configure models and parameters">
             <Settings2 size={13} />
             <span>Configure Swarm</span>
@@ -368,8 +541,8 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
 
         <div className="legend-group legend-telemetry-key">
           <div className="legend-item">
-            <span className="legend-flow-icon">●</span>
-            <span>{isMissionRunning ? 'Active Sequential Transfer' : 'Standby / Quiescent'}</span>
+            <Move size={11} color="#38bdf8" />
+            <span style={{ color: '#38bdf8' }}>Drag Nodes to Re-arrange</span>
           </div>
           <div className="legend-divider">|</div>
           <div className="legend-item">
@@ -379,9 +552,17 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
         </div>
       </div>
 
-      {/* Hero Graph Canvas with Generous Margin to Prevent Cutoff */}
+      {/* Hero Graph Canvas with Full Drag & Drop Support */}
       <div className="multi-agent-graph-canvas">
-        <svg className="mag-svg" viewBox="0 0 1000 580" preserveAspectRatio="xMidYMid meet">
+        <svg
+          ref={svgRef}
+          className={`mag-svg ${draggingAgentId ? 'is-dragging-active' : ''}`}
+          viewBox="0 0 1000 580"
+          preserveAspectRatio="xMidYMid meet"
+          onMouseMove={handleSVGMouseMove}
+          onMouseUp={handleSVGMouseUp}
+          onMouseLeave={handleSVGMouseUp}
+        >
           <defs>
             {/* Ambient Radial Glows */}
             <radialGradient id="apexOrchGlow" cx="50%" cy="50%" r="50%">
@@ -445,17 +626,17 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
             </pattern>
           </defs>
 
-          {/* 1. Curved Spline Channels: Dim when idle, vividly animated when channel is active */}
+          {/* 1. Curved Spline Channels: Dynamically recalculated to follow dragged nodes */}
           <g className="channels-layer">
             <path
               id="pathOrchDesign"
-              d={PIPELINE_PATHS.orchToDesign}
+              d={pipelinePaths.orchToDesign}
               stroke="url(#gradOrchDesign)"
               className={`spline-channel ${activeChannels.has('orchToDesign') ? 'sc-active-pulse' : 'sc-idle'}`}
             />
             <path
               id="pathOrchCoder"
-              d={PIPELINE_PATHS.orchToCoder}
+              d={pipelinePaths.orchToCoder}
               stroke="url(#gradOrchCoder)"
               className={`spline-channel ${activeChannels.has('orchToCoder') ? 'sc-active-pulse' : 'sc-idle'}`}
             />
@@ -463,69 +644,69 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
             {/* Bi-Directional Negotiation Loop between Design and Coder */}
             <path
               id="pathDesignCoderLoop"
-              d={PIPELINE_PATHS.designToCoderLoop}
+              d={pipelinePaths.designToCoderLoop}
               stroke="url(#gradDesignCoder)"
               className={`spline-channel sc-loop-upper ${activeChannels.has('designToCoderLoop') ? 'sc-active-pulse' : 'sc-idle'}`}
             />
             <path
               id="pathCoderDesignLoop"
-              d={PIPELINE_PATHS.coderToDesignLoop}
+              d={pipelinePaths.coderToDesignLoop}
               stroke="url(#gradCoderDesign)"
               className={`spline-channel sc-loop-lower ${activeChannels.has('coderToDesignLoop') ? 'sc-active-pulse' : 'sc-idle'}`}
             />
 
             <path
               id="pathDesignResearch"
-              d={PIPELINE_PATHS.designToResearch}
+              d={pipelinePaths.designToResearch}
               stroke="url(#gradDesignResearch)"
               className={`spline-channel ${activeChannels.has('designToResearch') ? 'sc-active-pulse' : 'sc-idle'}`}
             />
             <path
               id="pathCoderTester"
-              d={PIPELINE_PATHS.coderToTester}
+              d={pipelinePaths.coderToTester}
               stroke="url(#gradCoderTester)"
               className={`spline-channel ${activeChannels.has('coderToTester') ? 'sc-active-pulse' : 'sc-idle'}`}
             />
             <path
               id="pathResearchOrch"
-              d={PIPELINE_PATHS.researchToOrch}
+              d={pipelinePaths.researchToOrch}
               stroke="url(#gradResearchOrch)"
               className={`spline-channel ${activeChannels.has('researchToOrch') ? 'sc-active-pulse' : 'sc-idle'}`}
             />
             <path
               id="pathTesterOrch"
-              d={PIPELINE_PATHS.testerToOrch}
+              d={pipelinePaths.testerToOrch}
               stroke="url(#gradTesterOrch)"
               className={`spline-channel ${activeChannels.has('testerToOrch') ? 'sc-active-pulse' : 'sc-idle'}`}
             />
           </g>
 
-          {/* 2. Active Communication Particles: ONLY rendered when a task is actively running on that channel */}
+          {/* 2. Active Communication Particles: Follow dynamic paths during task execution */}
           {isMissionRunning && (
             <g className="continuous-particles-layer">
-              {/* Stage 1: Orch -> Coder Active Transfer (28 KB/s) */}
+              {/* Stage 1: Orch -> Coder Active Transfer */}
               {activeChannels.has('orchToCoder') && (
                 <>
                   <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
-                    <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0s" />
+                    <animateMotion dur="1.0s" repeatCount="indefinite" path={pipelinePaths.orchToCoder} begin="0s" />
                   </circle>
                   <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
-                    <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.3s" />
+                    <animateMotion dur="1.0s" repeatCount="indefinite" path={pipelinePaths.orchToCoder} begin="0.3s" />
                   </circle>
                   <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
-                    <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.6s" />
+                    <animateMotion dur="1.0s" repeatCount="indefinite" path={pipelinePaths.orchToCoder} begin="0.6s" />
                   </circle>
                 </>
               )}
 
-              {/* Stage 1: Orch -> Design Active Transfer (12 KB/s) */}
+              {/* Stage 1: Orch -> Design Active Transfer */}
               {activeChannels.has('orchToDesign') && (
                 <>
                   <circle r="3.8" fill="#38bdf8" filter="url(#packetGlow)">
-                    <animateMotion dur="1.6s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} begin="0s" />
+                    <animateMotion dur="1.6s" repeatCount="indefinite" path={pipelinePaths.orchToDesign} begin="0s" />
                   </circle>
                   <circle r="3.6" fill="#38bdf8" filter="url(#packetGlow)">
-                    <animateMotion dur="1.6s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} begin="0.8s" />
+                    <animateMotion dur="1.6s" repeatCount="indefinite" path={pipelinePaths.orchToDesign} begin="0.8s" />
                   </circle>
                 </>
               )}
@@ -534,10 +715,10 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               {activeChannels.has('designToCoderLoop') && (
                 <>
                   <circle r="3.8" fill="#c084fc" filter="url(#packetGlow)">
-                    <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.designToCoderLoop} begin="0s" />
+                    <animateMotion dur="1.4s" repeatCount="indefinite" path={pipelinePaths.designToCoderLoop} begin="0s" />
                   </circle>
                   <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
-                    <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToDesignLoop} begin="0s" />
+                    <animateMotion dur="1.4s" repeatCount="indefinite" path={pipelinePaths.coderToDesignLoop} begin="0s" />
                   </circle>
                 </>
               )}
@@ -545,18 +726,18 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               {/* Stage 2: Design -> Research specs */}
               {activeChannels.has('designToResearch') && (
                 <circle r="3.4" fill="#c084fc" filter="url(#packetGlow)">
-                  <animateMotion dur="2.0s" repeatCount="indefinite" path={PIPELINE_PATHS.designToResearch} begin="0s" />
+                  <animateMotion dur="2.0s" repeatCount="indefinite" path={pipelinePaths.designToResearch} begin="0s" />
                 </circle>
               )}
 
-              {/* Stage 3: Coder -> Tester Implementation Transfer (14 KB/s) */}
+              {/* Stage 3: Coder -> Tester Implementation Transfer */}
               {activeChannels.has('coderToTester') && (
                 <>
                   <circle r="4.0" fill="#f43f5e" filter="url(#packetGlow)">
-                    <animateMotion dur="1.3s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0s" />
+                    <animateMotion dur="1.3s" repeatCount="indefinite" path={pipelinePaths.coderToTester} begin="0s" />
                   </circle>
                   <circle r="3.6" fill="#f43f5e" filter="url(#packetGlow)">
-                    <animateMotion dur="1.3s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0.55s" />
+                    <animateMotion dur="1.3s" repeatCount="indefinite" path={pipelinePaths.coderToTester} begin="0.55s" />
                   </circle>
                 </>
               )}
@@ -564,20 +745,20 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               {/* Stage 4: Tester -> Orch Verification Feedback */}
               {activeChannels.has('testerToOrch') && (
                 <circle r="3.5" fill="#f43f5e" filter="url(#packetGlow)">
-                  <animateMotion dur="2.4s" repeatCount="indefinite" path={PIPELINE_PATHS.testerToOrch} begin="0s" />
+                  <animateMotion dur="2.4s" repeatCount="indefinite" path={pipelinePaths.testerToOrch} begin="0s" />
                 </circle>
               )}
 
               {/* Research -> Orch Feedback */}
               {activeChannels.has('researchToOrch') && (
                 <circle r="3.5" fill="#fb923c" filter="url(#packetGlow)">
-                  <animateMotion dur="2.6s" repeatCount="indefinite" path={PIPELINE_PATHS.researchToOrch} begin="0s" />
+                  <animateMotion dur="2.6s" repeatCount="indefinite" path={pipelinePaths.researchToOrch} begin="0s" />
                 </circle>
               )}
             </g>
           )}
 
-          {/* 3. Real Event Transient Packets (In-Flight Messages & Task Handoffs) */}
+          {/* 3. Real Event Transient Packets */}
           <g className="transient-packets-layer">
             {dynamicPackets.map((pkt) => (
               <circle key={pkt.id} r="5" fill={pkt.color} filter="url(#packetGlow)">
@@ -588,7 +769,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
 
           {/* 4. Central Bi-Directional Negotiation Loop Badge */}
           <g
-            transform="translate(500, 265)"
+            transform={`translate(${negotiationBadgePos.x}, ${negotiationBadgePos.y})`}
             className={`negotiation-loop-badge-group ${activeChannels.has('designToCoderLoop') ? 'nlb-active' : 'nlb-idle'}`}
           >
             <rect x="-115" y="-12" width="230" height="24" rx="12" className="negotiation-badge-pill" />
@@ -597,9 +778,9 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
             </text>
           </g>
 
-          {/* 5. Floating Data Transfer Volume Pills - Illuminated only when active */}
+          {/* 5. Floating Data Transfer Volume Pills - Dynamically Track Nodes */}
           <g className="data-badges-layer">
-            {DATA_BADGES.map((b) => {
+            {dataBadges.map((b) => {
               const isActive = activeChannels.has(b.id);
               return (
                 <g key={b.id} transform={`translate(${b.x}, ${b.y})`} className={`data-badge-group ${isActive ? 'badge-active' : 'badge-idle'}`}>
@@ -612,10 +793,11 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
             })}
           </g>
 
-          {/* 6. Multi-Model Nodes with Tiered Hierarchy */}
+          {/* 6. Multi-Model Nodes with Smooth Drag & Drop and Tiered Hierarchy */}
           <g className="model-nodes-layer">
-            {(Object.keys(NODE_HIERARCHY) as AgentId[]).map((agentId) => {
-              const node = NODE_HIERARCHY[agentId];
+            {(Object.keys(nodePositions) as AgentId[]).map((agentId) => {
+              const pos = nodePositions[agentId];
+              const meta = NODE_METADATA[agentId];
               const roleColor = ROLE_COLORS[agentId];
               const roleGlow = ROLE_GLOWS[agentId];
               const status = statuses[agentId] || {
@@ -624,12 +806,13 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               };
               const isSelected = selectedAgentId === agentId;
               const isHovered = hoveredAgentId === agentId;
+              const isDraggingThis = draggingAgentId === agentId;
               const model = getModelForAgent(agentId);
 
               const isBlocked = status.isBlocked || status.state === 'BLOCKED' || status.state === 'WAITING';
               const isFailed = status.state === 'FAILED';
               const isWorking = status.state === 'WORKING' || status.state === 'STARTING';
-              const isApex = node.tier === 'apex';
+              const isApex = meta.tier === 'apex';
               const hasRetries = (status.retryCount || 0) > 0;
 
               const renderIcon = () => {
@@ -641,17 +824,19 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                 return <Radio size={isApex ? 19 : 16} color={roleColor} />;
               };
 
-              const halfW = node.w / 2;
-              const halfH = node.h / 2;
+              const halfW = meta.w / 2;
+              const halfH = meta.h / 2;
 
               return (
                 <g
                   key={agentId}
-                  className={`swarm-node-group node-tier-${node.tier} ${isSelected ? 'node-active-selected' : ''} ${
+                  className={`swarm-node-group node-tier-${meta.tier} ${isSelected ? 'node-active-selected' : ''} ${
                     isBlocked ? 'node-state-blocked' : ''
-                  } ${isFailed ? 'node-state-failed' : ''} ${isWorking ? 'node-actively-working' : ''}`}
-                  transform={`translate(${node.x}, ${node.y})`}
-                  onClick={() => onSelectAgent(agentId)}
+                  } ${isFailed ? 'node-state-failed' : ''} ${isWorking ? 'node-actively-working' : ''} ${
+                    isDraggingThis ? 'is-node-dragging' : ''
+                  }`}
+                  transform={`translate(${pos.x}, ${pos.y})`}
+                  onMouseDown={(e) => handleNodeMouseDown(e, agentId)}
                   onMouseEnter={() => setHoveredAgentId(agentId)}
                   onMouseLeave={() => setHoveredAgentId(null)}
                 >
@@ -660,8 +845,8 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                     <rect
                       x={-halfW - 8}
                       y={-halfH - 8}
-                      width={node.w + 16}
-                      height={node.h + 16}
+                      width={meta.w + 16}
+                      height={meta.h + 16}
                       rx="16"
                       fill="none"
                       stroke={roleColor}
@@ -675,8 +860,8 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                   <rect
                     x={-halfW}
                     y={-halfH}
-                    width={node.w}
-                    height={node.h}
+                    width={meta.w}
+                    height={meta.h}
                     rx={isApex ? 14 : 10}
                     className="swarm-node-bg"
                     style={{
@@ -690,8 +875,8 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                     <rect
                       x={-halfW}
                       y={-halfH}
-                      width={node.w}
-                      height={node.h}
+                      width={meta.w}
+                      height={meta.h}
                       rx={isApex ? 14 : 10}
                       fill="url(#blockedHatch)"
                       opacity="0.75"
@@ -741,7 +926,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                     <g transform={`translate(${isApex ? 8 : 7}, ${isApex ? 8 : 7})`}>{renderIcon()}</g>
                   </g>
 
-                  {/* Model Title & Routing Rationale Button */}
+                  {/* Model Title */}
                   <text x={-halfW + (isApex ? 60 : 54)} y={-halfH + (isApex ? 26 : 22)} className="node-model-title">
                     {model.name}
                   </text>
@@ -767,7 +952,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                     className="node-role-subtitle"
                     fill={roleColor}
                   >
-                    {node.roleKey}
+                    {meta.roleKey}
                   </text>
 
                   {/* Progress & Live State Text */}
@@ -807,7 +992,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                   {/* Mini Token/Burn Sparkline Bar */}
                   <g transform={`translate(${-halfW + 16}, ${halfH - 22})`}>
                     <g className="mini-node-sparkline">
-                      {node.sparkline.map((val, sIdx) => {
+                      {meta.sparkline.map((val, sIdx) => {
                         const barH = Math.max(3, (val / 80) * 12);
                         const isSpike = val > 50;
                         return (
@@ -819,22 +1004,22 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                             height={barH}
                             rx="1"
                             fill={isSpike ? '#f59e0b' : roleColor}
-                            opacity={0.75 + (sIdx / node.sparkline.length) * 0.25}
+                            opacity={0.75 + (sIdx / meta.sparkline.length) * 0.25}
                           />
                         );
                       })}
                     </g>
                     <text x="46" y="10" className="node-resource-text">
-                      CPU {status.cpuPercent || node.defaultCpu}% • {status.promptTokens ? `${Math.round((status.promptTokens + (status.completionTokens || 0)) / 1000)}k` : node.defaultTokens} tok
+                      CPU {status.cpuPercent || meta.defaultCpu}% • {status.promptTokens ? `${Math.round((status.promptTokens + (status.completionTokens || 0)) / 1000)}k` : meta.defaultTokens} tok
                     </text>
                   </g>
 
                   {/* Node Bottom Context Pill Badge */}
-                  {!isApex && node.badges && (
+                  {!isApex && meta.badges && (
                     <g transform={`translate(${-halfW + 14}, ${halfH + 8})`}>
-                      <rect x="0" y="0" width={node.w - 28} height="18" rx="5" className="worker-badge-pill" />
-                      <text x={(node.w - 28) / 2} y="12" className="worker-badge-text">
-                        {node.badges[0]}
+                      <rect x="0" y="0" width={meta.w - 28} height="18" rx="5" className="worker-badge-pill" />
+                      <text x={(meta.w - 28) / 2} y="12" className="worker-badge-text">
+                        {meta.badges[0]}
                       </text>
                     </g>
                   )}
@@ -849,8 +1034,8 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
           <div
             className="model-rationale-popover"
             style={{
-              left: `${NODE_HIERARCHY[activeRationaleAgentId].x > 500 ? NODE_HIERARCHY[activeRationaleAgentId].x - 260 : NODE_HIERARCHY[activeRationaleAgentId].x + 40}px`,
-              top: `${NODE_HIERARCHY[activeRationaleAgentId].y - 20}px`,
+              left: `${nodePositions[activeRationaleAgentId].x > 500 ? nodePositions[activeRationaleAgentId].x - 260 : nodePositions[activeRationaleAgentId].x + 40}px`,
+              top: `${nodePositions[activeRationaleAgentId].y - 20}px`,
             }}
           >
             <div className="mrp-header">

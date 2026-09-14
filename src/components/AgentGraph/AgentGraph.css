@@ -85,6 +85,37 @@
 .gtb-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.gtb-auto-arrange-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary, #cbd5e1);
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.gtb-auto-arrange-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-layout-modified {
+  background: rgba(56, 189, 248, 0.12) !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
+  color: #38bdf8 !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
 }
 
 .gtb-config-btn {
@@ -319,10 +350,22 @@
   pointer-events: none;
 }
 
-/* Swarm Node Groups */
+/* Swarm Node Groups - Draggable with Grab / Grabbing Cursors */
+.mag-svg.is-dragging-active {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
 .swarm-node-group {
-  cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease;
+  cursor: grab;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease;
+  user-select: none;
+}
+
+.swarm-node-group.is-node-dragging {
+  cursor: grabbing !important;
+  transition: none !important;
+  filter: drop-shadow(0 0 28px rgba(56, 189, 248, 0.7)) scale(1.03) !important;
 }
 
 .swarm-node-group:hover {
