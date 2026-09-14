@@ -19,6 +19,70 @@
   to { transform: translateX(0); }
 }
 
+/* Dynamic Floating Pop-up Positioned Side-by-Side with Agent Card */
+.agent-inspector-drawer.is-floating {
+  position: absolute;
+  top: var(--insp-top, 20px);
+  left: var(--insp-left, 20px);
+  right: auto;
+  bottom: auto;
+  width: 365px;
+  max-height: 485px;
+  background: rgba(8, 14, 26, 0.98);
+  backdrop-filter: blur(28px);
+  border: 1px solid var(--insp-role-color, rgba(56, 189, 248, 0.45));
+  border-radius: 12px;
+  box-shadow: 
+    0 20px 48px rgba(0, 0, 0, 0.88),
+    0 0 32px rgba(0, 0, 0, 0.6),
+    0 0 16px rgba(56, 189, 248, 0.12);
+  display: flex;
+  flex-direction: column;
+  z-index: 120;
+  animation: floating-popover-appear 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes floating-popover-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Directional Triangular Pointer Notch connecting the Pop-up to the Agent Card */
+.agent-inspector-drawer.is-floating[data-placement="right"]::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 36px;
+  width: 10px;
+  height: 10px;
+  background: rgba(8, 14, 26, 0.98);
+  border-left: 1px solid var(--insp-role-color, rgba(56, 189, 248, 0.45));
+  border-bottom: 1px solid var(--insp-role-color, rgba(56, 189, 248, 0.45));
+  transform: rotate(45deg);
+  z-index: 125;
+}
+
+.agent-inspector-drawer.is-floating[data-placement="left"]::before {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 36px;
+  width: 10px;
+  height: 10px;
+  background: rgba(8, 14, 26, 0.98);
+  border-right: 1px solid var(--insp-role-color, rgba(56, 189, 248, 0.45));
+  border-top: 1px solid var(--insp-role-color, rgba(56, 189, 248, 0.45));
+  transform: rotate(45deg);
+  z-index: 125;
+}
+
 .inspector-header {
   height: 50px;
   padding: 0 16px;

@@ -25,7 +25,6 @@ import { LiveCommunicationPanel } from './components/LiveCommunication/LiveCommu
 import { BottomTelemetryPanel } from './components/BottomTelemetry/BottomTelemetryPanel';
 import { AgentCard } from './components/AgentCard/AgentCard';
 import { TaskGraphView } from './components/TaskGraph/TaskGraphView';
-import { AgentInspector } from './components/AgentInspector/AgentInspector';
 import { ModelConfigModal } from './components/ModelConfigModal/ModelConfigModal';
 import { ConflictModal } from './components/ConflictResolver/ConflictModal';
 import { GitDiffModal } from './components/GitDiffViewer/GitDiffModal';
@@ -315,6 +314,8 @@ export const App: React.FC = () => {
             onModelChange={handleModelChange}
             onTogglePauseAgent={handleTogglePauseAgent}
             onRetryAgent={handleRetryAgent}
+            onStopAgent={handleStopAgent}
+            onSendMessage={handleSendMessageToAgent}
             mission={mission}
           />
 
@@ -433,33 +434,7 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* Modals & Drawers */}
-      {selectedAgentId && (
-        <AgentInspector
-          agentId={selectedAgentId}
-          status={
-            agentStatuses[selectedAgentId] || {
-              agentId: selectedAgentId,
-              role: 'Coder Agent',
-              state: 'IDLE',
-              progress: 0,
-              filesTouchedCount: 0,
-              messagesCount: 0,
-              executionDurationMs: 0,
-            }
-          }
-          events={events}
-          assignedModelId={currentSelectedModelId}
-          onClose={() => setSelectedAgentId(undefined)}
-          onPause={handlePauseAgent}
-          onResume={handleResumeAgent}
-          onStop={handleStopAgent}
-          onRetry={handleRetryAgent}
-          onModelChange={handleModelChange}
-          onSendMessage={handleSendMessageToAgent}
-        />
-      )}
-
+      {/* Modals & Dialogs */}
       {showModelConfig && (
         <ModelConfigModal
           currentTopology={topologyMode}

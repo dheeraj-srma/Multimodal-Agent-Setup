@@ -42,6 +42,11 @@ interface AgentInspectorProps {
   onRetry?: (agentId: AgentId) => void;
   onModelChange?: (agentId: AgentId, modelId: string) => void;
   onSendMessage: (to: AgentId, message: string) => void;
+  floatingPosition?: {
+    left: number;
+    top: number;
+    placement?: 'left' | 'right';
+  };
 }
 
 export const AgentInspector: React.FC<AgentInspectorProps> = ({
@@ -56,9 +61,28 @@ export const AgentInspector: React.FC<AgentInspectorProps> = ({
   onRetry,
   onModelChange,
   onSendMessage,
+  floatingPosition,
 }) => {
   const [directiveText, setDirectiveText] = useState('');
   const [currentModel, setCurrentModel] = useState(assignedModelId);
+
+  // Sync external model assignment changes
+  React.useEffect(() => {
+    if (assignedModelId) {
+      setCurrentModel(assignedModelId);
+    }
+  }, [assignedModelId]);
+
+  // Close on Escape key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +111,21 @@ export const AgentInspector: React.FC<AgentInspectorProps> = ({
   const modelInfo = ALL_SUPPORTED_MODELS.find((m) => m.id === currentModel) || ALL_SUPPORTED_MODELS[0];
 
   return (
-    <div className="agent-inspector-drawer">
+    <div
+      className={`agent-inspector-drawer ${floatingPosition ? 'is-floating' : ''}`}
+      data-placement={floatingPosition?.placement || 'right'}
+      style={
+        floatingPosition
+          ? ({
+              '--insp-left': `${floatingPosition.left}px`,
+              '--insp-top': `${floatingPosition.top}px`,
+              '--insp-role-color': roleColor,
+            } as React.CSSProperties)
+          : undefined
+      }
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
       {/* Header */}
       <div className="inspector-header" style={{ borderBottomColor: roleColor }}>
         <div className="insp-identity">

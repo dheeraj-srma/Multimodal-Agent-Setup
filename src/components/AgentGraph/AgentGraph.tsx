@@ -34,12 +34,13 @@ import {
   ROLE_GLOWS,
   MODEL_PRICING,
 } from '../../config/models';
+import { AgentInspector } from '../AgentInspector/AgentInspector';
 import './AgentGraph.css';
 
 interface AgentGraphProps {
   statuses: Record<AgentId, AgentStatus>;
   selectedAgentId?: AgentId;
-  onSelectAgent: (agentId: AgentId) => void;
+  onSelectAgent: (agentId: AgentId | undefined) => void;
   recentEvents: AgentEvent[];
   topologyMode: ModelTopologyMode;
   customAssignments?: Partial<Record<AgentId, string>>;
@@ -48,6 +49,8 @@ interface AgentGraphProps {
   onModelChange?: (agentId: AgentId, modelId: string) => void;
   onTogglePauseAgent?: (agentId: AgentId) => void;
   onRetryAgent?: (agentId: AgentId) => void;
+  onStopAgent?: (agentId: AgentId) => void;
+  onSendMessage?: (to: AgentId, message: string) => void;
   mission?: Mission;
 }
 
@@ -147,6 +150,8 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
   onModelChange,
   onTogglePauseAgent,
   onRetryAgent,
+  onStopAgent,
+  onSendMessage,
   mission,
 }) => {
   // Node positions in state for smooth drag-and-drop & auto-arrange
@@ -166,6 +171,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
     hasMoved: boolean;
   } | null>(null);
 
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dynamicPackets, setDynamicPackets] = useState<DynamicPacket[]>([]);
   const [hoveredAgentId, setHoveredAgentId] = useState<AgentId | null>(null);
@@ -250,12 +256,112 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
     if (dragStartRef.current) {
       // If it wasn't a significant drag, treat as a selection click
       if (!dragStartRef.current.hasMoved) {
-        onSelectAgent(dragStartRef.current.agentId);
+        const clickedId = dragStartRef.current.agentId;
+        onSelectAgent(clickedId === selectedAgentId ? undefined : clickedId);
       }
+    } else {
+      // Clicked on empty SVG canvas background - deselect agent to dismiss floating menu
+      onSelectAgent(undefined);
     }
     dragStartRef.current = null;
     setDraggingAgentId(null);
   };
+
+  // Canvas background click handler for dismissing pop-ups
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    if (e.target === svgRef.current || (e.target as HTMLElement).classList.contains('multi-agent-graph-canvas')) {
+      onSelectAgent(undefined);
+      setActiveRationaleAgentId(null);
+    }
+  };
+
+  // Compute pixel-precise position of an agent node in the canvas container
+  const getNodeContainerPixelPos = useCallback(
+    (agentId: AgentId) => {
+      const pos = nodePositions[agentId] || DEFAULT_NODE_POSITIONS[agentId];
+      const svg = svgRef.current;
+      const container = canvasContainerRef.current;
+      const meta = NODE_METADATA[agentId];
+      const halfW = meta ? meta.w / 2 : 100;
+
+      let cardCenterX = 500;
+      let cardCenterY = 250;
+      let containerWidth = 1000;
+      let containerHeight = 515;
+
+      if (container) {
+        const cRect = container.getBoundingClientRect();
+        if (cRect.width > 0) containerWidth = cRect.width;
+        if (cRect.height > 0) containerHeight = cRect.height;
+      }
+
+      if (svg && container) {
+        try {
+          const pt = svg.createSVGPoint();
+          pt.x = pos.x;
+          pt.y = pos.y;
+          const ctm = svg.getScreenCTM();
+          if (ctm) {
+            const screenPt = pt.matrixTransform(ctm);
+            const cRect = container.getBoundingClientRect();
+            cardCenterX = screenPt.x - cRect.left;
+            cardCenterY = screenPt.y - cRect.top;
+          } else {
+            cardCenterX = (pos.x / 1000) * containerWidth;
+            cardCenterY = (pos.y / 580) * containerHeight;
+          }
+        } catch {
+          cardCenterX = (pos.x / 1000) * containerWidth;
+          cardCenterY = (pos.y / 580) * containerHeight;
+        }
+      } else {
+        cardCenterX = (pos.x / 1000) * containerWidth;
+        cardCenterY = (pos.y / 580) * containerHeight;
+      }
+
+      const scaleX = containerWidth / 1000;
+      const cardHalfW_px = halfW * scaleX;
+
+      const popupWidth = 365;
+      const popupHeight = 480;
+      const gap = 16;
+
+      let placement: 'left' | 'right' = pos.x > 500 ? 'left' : 'right';
+      let left = 0;
+
+      if (placement === 'left') {
+        left = cardCenterX - cardHalfW_px - popupWidth - gap;
+        if (left < 10) {
+          if (cardCenterX + cardHalfW_px + popupWidth + gap <= containerWidth - 10) {
+            placement = 'right';
+            left = cardCenterX + cardHalfW_px + gap;
+          } else {
+            left = Math.max(10, left);
+          }
+        }
+      } else {
+        left = cardCenterX + cardHalfW_px + gap;
+        if (left + popupWidth > containerWidth - 10) {
+          if (cardCenterX - cardHalfW_px - popupWidth - gap >= 10) {
+            placement = 'left';
+            left = cardCenterX - cardHalfW_px - popupWidth - gap;
+          } else {
+            left = Math.min(containerWidth - popupWidth - 10, left);
+          }
+        }
+      }
+
+      let top = cardCenterY - 45;
+      top = Math.max(10, Math.min(containerHeight - popupHeight - 10, top));
+
+      return {
+        left: Math.round(left),
+        top: Math.round(top),
+        placement,
+      };
+    },
+    [nodePositions]
+  );
 
   // Dynamically compute continuous connection spline paths based on current nodePositions
   const pipelinePaths = useMemo(() => {
@@ -553,7 +659,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
       </div>
 
       {/* Hero Graph Canvas with Full Drag & Drop Support */}
-      <div className="multi-agent-graph-canvas">
+      <div className="multi-agent-graph-canvas" ref={canvasContainerRef} onClick={handleCanvasClick}>
         <svg
           ref={svgRef}
           className={`mag-svg ${draggingAgentId ? 'is-dragging-active' : ''}`}
@@ -1091,6 +1197,33 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               </div>
             </div>
           </div>
+        )}
+        {/* Floating Agent Inspector Pop-up Side-by-Side with Selected Agent Card */}
+        {selectedAgentId && (
+          <AgentInspector
+            agentId={selectedAgentId}
+            status={
+              statuses[selectedAgentId] || {
+                agentId: selectedAgentId,
+                role: NODE_METADATA[selectedAgentId]?.roleKey || 'Agent',
+                state: 'IDLE',
+                progress: 0,
+                filesTouchedCount: 0,
+                messagesCount: 0,
+                executionDurationMs: 0,
+              }
+            }
+            events={recentEvents}
+            assignedModelId={getModelForAgent(selectedAgentId).id}
+            onClose={() => onSelectAgent(undefined)}
+            onPause={(aid) => onTogglePauseAgent?.(aid)}
+            onResume={(aid) => onTogglePauseAgent?.(aid)}
+            onStop={(aid) => onStopAgent?.(aid)}
+            onRetry={(aid) => onRetryAgent?.(aid)}
+            onModelChange={(aid, mid) => onModelChange?.(aid, mid)}
+            onSendMessage={(to, msg) => onSendMessage?.(to, msg)}
+            floatingPosition={getNodeContainerPixelPos(selectedAgentId)}
+          />
         )}
       </div>
     </div>

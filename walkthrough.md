@@ -1,53 +1,57 @@
-# Walkthrough: Sequential Task Communication & Telemetry HUD Redesign
+# Walkthrough: Floating Agent Menu Pop-up Side-by-Side with Agent Card
 
-This update addresses two critical operational observations:
-1. **Node Active Communication Sequencing**: Connection line particle streams now animate **only during active task execution** following the genuine sequential handoff pipeline (`Orchestrator` ➔ `Design` ➔ `Coder` ➔ `Tester` ➔ `Orchestrator`), resting in a calm quiescent state when idle or completed.
-2. **Telemetry Layout Redesign**: Redesigned the hardware metrics monitor and live bandwidth waveform oscilloscope so that no SVG paths, numbers, or footer status items get cut off or clipped.
+This update refactors the agent inspection menu from a docked edge panel/drawer into a dynamic, glassmorphic **floating pop-up menu anchored directly beside the clicked agent card** on the mission canvas.
 
 ---
 
-## 1. Active Sequential Communication
+## 1. Floating Pop-up Menu Architecture
 
-### Problem
-Previously, particles on all 6 connection channels looped continuously even when tasks were completed (`100%`) or idle (`0%`), giving a noisy "Christmas tree" perpetual motion effect rather than reflecting actual data transfers.
-
-### Solution
-- **State-Aware Flow**: Continuous particles on connection lines are **completely disabled** when no task is running (`mission?.status !== 'RUNNING'`).
-- **Sequential Pipeline Progression**: When a mission is running, particle flows illuminate **only on the active handoff channel**:
-  1. **Stage 1 (Orchestrator Planning & Dispatch)**: Particles flow from `Orchestrator` ➔ `Design` and `Orchestrator` ➔ `Coder`.
-  2. **Stage 2 (Design Processing & Spec Contract)**: As Design finishes tokens, communication shifts to the `Design ➔ Coder` negotiation loop.
-  3. **Stage 3 (Coder Processing & Implementation)**: When Coder finishes AST transforms, communication shifts to `Coder ➔ Tester`.
-  4. **Stage 4 (Tester Auditing & Verification Report)**: When Tester validates regressions, communication flows from `Tester ➔ Orchestrator`.
-  5. **Completion**: When the swarm reaches 100%, all continuous particle flows cease and the graph rests in dark HUD equilibrium.
-- **Dynamic Event Packets**: Whenever an agent sends a message or completes a task, a single dynamic packet travels along that exact channel to the recipient node, providing visual confirmation of inter-agent messaging.
-- **Zero Collision Badges**: Removed the overlapping badge at `(500, 442)` that previously sliced across the Research card. Badges now cleanly sit on open curve segments and illuminate only when their channel is active.
+- **Side-by-Side Anchoring Engine**:
+  - Replaced the legacy fixed edge drawer (`position: fixed; right: 0`) with a floating popover anchored right inside [.multi-agent-graph-canvas](file:///d:/Projects/Multi%20Agent%20Setup/src/components/AgentGraph/AgentGraph.tsx).
+  - Implemented `getNodeContainerPixelPos(agentId)` using `svg.createSVGPoint()` and `svg.getScreenCTM()` to compute the exact sub-pixel screen coordinates of the selected agent node.
+  - **Smart Directional Placement**:
+    - **Nodes on left half** (e.g. Design `@design`, Research `@research`): Floating menu appears directly on the **right** side of the card (`left = cardCenterX + cardHalfW + 16px`).
+    - **Nodes on right half** (e.g. Coder `@coder`, Tester `@tester`): Floating menu appears directly on the **left** side of the card (`left = cardCenterX - cardHalfW - popupWidth - 16px`).
+    - **Apex Orchestrator** (center): Placed adjacent side-by-side with boundary clamping.
+  - **Boundary Clamping**:
+    - Clamps `left` and `top` within `[10px, containerWidth/Height - 10px]`, guaranteeing the pop-up never overflows the canvas borders.
+  - **Real-Time Drag Synchronization**:
+    - As an agent node is dragged across the canvas, the floating pop-up menu glides smoothly side-by-side with the card in real time!
 
 ---
 
-## 2. Redesigned Telemetry HUD (Unclipped)
+## 2. Visual Design & Refinements
 
-### Problem
-The bottom metrics panel had fixed constraints where:
-- The waveform sine wave lines terminated abruptly and got clipped at the right and bottom edges.
-- The footer text (`Built with Antigravity • Powered by Gemini`) was pushed right against the bottom waveform and clipped.
+- **Glassmorphic Theme**:
+  - `background: rgba(8, 14, 26, 0.98); backdrop-filter: blur(28px);`
+  - Border and ambient drop glow dynamically inherit the active agent's role color (`var(--insp-role-color)`): purple for Design, cyan for Orchestrator, emerald for Coder, orange for Research, and rose for Tester.
+- **Directional Pointer Notches**:
+  - Added triangular indicator notches on [.agent-inspector-drawer.is-floating[data-placement="right"]](file:///d:/Projects/Multi%20Agent%20Setup/src/components/AgentInspector/AgentInspector.css) and `[data-placement="left"]` that point directly to the adjacent card.
+- **Controls & Sections**:
+  - **Header**: Role badge, `@agentId`, and close button `[X]`.
+  - **Assigned Model Dropdown**: Allows instant mid-run model swapping (`Gemini 1.5 Pro`, `Claude 3.5 Sonnet`, `GPT-4o`, `Llama 3.1 405B`, `Sonar Deep Research`) with instant pricing recalculation.
+  - **Control Action Buttons**: `[> RESUME]` / `[|| PAUSE]`, `[⟲ RETRY]`, `[□ KILL]`.
+  - **Token & Cost Tracking**: Prompt tokens, Completion tokens, Total tokens, and Estimated spend.
+  - **Resource Allocation**: CPU usage %, Memory alloc MB, Progress %, State (`COMPLETED` / `WORKING`).
+  - **Active Assignment**: Task title and current action description.
+  - **Direct Operator Directive**: Direct input to dispatch custom prompts to the agent.
+  - **Activity Stream**: Timestamped live logs for the agent.
 
-### Solution
-- **Dock Dimensions**: Increased [BottomTelemetryPanel](file:///d:/Projects/Multi%20Agent%20Setup/src/components/BottomTelemetry/BottomTelemetryPanel.tsx) height to `240px` and metrics panel width to `335px` with dedicated flex spacing.
-- **Live Signal Monitor / Oscilloscope Screen**:
-  - Encased in a dedicated dark bezel card (`rgba(0, 0, 0, 0.55)`) with subtle HUD grid lines and header tag `LIVE BANDWIDTH HARMONIC • 0.0% COLLISION`.
-  - SVG `viewBox="0 0 300 36"` with smooth cubic Bezier harmonic waves strictly bounded between `y=8` and `y=28`, with soft phosphor gradient area fill under the curve.
-  - Zero jagged fragments or clipped stroke boundaries.
-- **Dedicated Footer Status Bar**:
-  - Fixed `26px` bar with solid dark background (`rgba(6, 10, 18, 0.98)`), distinct top border, and clean flex alignment:
-    - Left: `● System Online • 4/4 Agents Active`
-    - Right: `Built with Antigravity • Powered by Gemini`
-  - Completely separate from the metrics panel so text never collides or gets overlapped.
+---
+
+## 3. Interaction & Dismissal
+
+- **Click to Open**: Clicking any agent node on the canvas immediately opens its floating menu pop-up at that spot.
+- **Close Button**: Clicking the `[X]` button on the floating header cleanly closes the menu.
+- **Canvas Click-to-Dismiss**: Clicking anywhere on the empty canvas backdrop dismisses the floating pop-up.
+- **Escape Key**: Pressing `Escape` on the keyboard instantly closes the floating menu.
+- **Stop Propagation**: All interactions within the floating pop-up (changing model, scrolling, typing directives, clicking buttons) do not trigger canvas drag or deselection.
 
 ---
 
 ## Verification Results
+
 - **Unit Tests**: `npm test -- --run` passed with **12 / 12 passing**.
 - **Type Checking**: `npx tsc --noEmit` exited with code **0**.
-- **Production Build**: `npm run build` compiled cleanly.
-- **Dev Server**: Active on `http://localhost:5173/` responding with **HTTP 200 OK**.
-- **Git Commit**: Committed (`29a349d`) and pushed to `origin/main`.
+- **Production Build**: `npm run build` compiled cleanly into `dist/assets/`.
+- **Dev Server**: Running on `http://localhost:5173/` (HTTP 200 OK).
