@@ -540,13 +540,22 @@ Switch between specialized operational dashboards with zero page reloads:
 ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
+### ⚡ Autonomous Task DAG Pipeline Board
+
+<p align="center">
+  <img src="Screenshots/Tasks.png" alt="Autonomous Task DAG Pipeline Board" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 8: Dedicated Task DAG Pipeline view showing dynamic dependency graphs, active/queued stages, real-time concurrency metrics, and task duration timers.</em>
+</p>
+
 ### 📁 Workspace Files Explorer & Diff Inspector
 
 <p align="center">
   <img src="Screenshots/Workspace.png" alt="Workspace Files Explorer and Diff Inspector" width="100%" />
 </p>
 <p align="center">
-  <em>Figure 8: Dedicated Workspace Files view displaying full project directory trees, agent file change indicators, syntax-highlighted diffs, and protected path shields.</em>
+  <em>Figure 9: Dedicated Workspace Files view displaying full project directory trees, agent file change indicators, syntax-highlighted diffs, and protected path shields.</em>
 </p>
 
 ### 🐙 Integrated Git Version Control & Commit Deck
@@ -555,7 +564,7 @@ Switch between specialized operational dashboards with zero page reloads:
   <img src="Screenshots/Github%20Controll.png" alt="Integrated Git Version Control and Commit Deck" width="100%" />
 </p>
 <p align="center">
-  <em>Figure 9: Integrated Git Operations center featuring branch synchronization status, atomic commit creator, unstaged change diffs, and historical commit timeline.</em>
+  <em>Figure 10: Integrated Git Operations center featuring branch synchronization status, atomic commit creator, unstaged change diffs, and historical commit timeline.</em>
 </p>
 
 ---
