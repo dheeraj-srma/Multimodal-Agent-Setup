@@ -4,9 +4,65 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  height: 240px;
-  min-height: 240px;
   width: 100%;
+  position: relative;
+  flex-shrink: 0;
+  transition: height 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.45);
+}
+
+.bottom-telemetry-dock.is-resizing {
+  transition: none !important;
+}
+
+/* Draggable Vertical Resize Handle */
+.btd-resize-handle {
+  position: absolute;
+  top: -5px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  cursor: row-resize;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.18s ease;
+}
+
+.btd-resize-handle:hover,
+.bottom-telemetry-dock.is-resizing .btd-resize-handle {
+  background: rgba(56, 189, 248, 0.15);
+}
+
+.btd-resize-grip {
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.18);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btd-resize-handle:hover .btd-resize-grip,
+.bottom-telemetry-dock.is-resizing .btd-resize-grip {
+  width: 72px;
+  background: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+}
+
+/* Collapsed State Sizing */
+.bottom-telemetry-dock.dock-collapsed {
+  border-top-color: rgba(56, 189, 248, 0.2);
+}
+
+.bottom-telemetry-dock.dock-collapsed .btd-body,
+.bottom-telemetry-dock.dock-collapsed .btd-footer {
+  display: none !important;
+}
+
+.bottom-telemetry-dock.dock-collapsed .btd-header {
+  border-bottom: none;
 }
 
 .btd-header {
@@ -16,7 +72,89 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px 0 16px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.btd-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btd-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btd-control-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  height: 24px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary, #cbd5e1);
+  font-size: 10.5px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btd-control-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btd-collapse-btn {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.28);
+  color: #38bdf8;
+}
+
+.btd-collapse-btn:hover {
+  background: rgba(56, 189, 248, 0.2);
+  border-color: #38bdf8;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.btd-collapse-btn.is-collapsed {
+  background: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.35);
+  color: #34d399;
+}
+
+.btd-collapse-btn.is-collapsed:hover {
+  background: rgba(52, 211, 153, 0.25);
+  border-color: #34d399;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.35);
+}
+
+.btd-control-label {
+  letter-spacing: 0.02em;
+}
+
+.btd-collapsed-status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  padding: 3px 8px;
+  border-radius: 4px;
 }
 
 .btd-tabs-row {

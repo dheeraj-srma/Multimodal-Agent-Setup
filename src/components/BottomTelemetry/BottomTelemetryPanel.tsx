@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Activity,
   Terminal,
@@ -18,6 +18,10 @@ import {
   Play,
   Layers,
   Coins,
+  ChevronDown,
+  ChevronUp,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { AgentEvent, GitStatusInfo, AgentId, EventTypeFilter } from '../../types';
 import { ROLE_COLORS } from '../../config/models';
@@ -31,6 +35,11 @@ interface BottomTelemetryPanelProps {
   sessionTokens?: number;
   sessionCost?: number;
 }
+
+const DEFAULT_HEIGHT = 260;
+const MIN_HEIGHT = 130;
+const MAX_HEIGHT = 650;
+const COLLAPSED_HEIGHT = 38;
 
 const AGENT_RESOURCE_BREAKDOWN = [
   { id: 'orchestrator' as AgentId, name: 'Gemini 1.5 Pro (Orchestrator)', cpu: 34, tokens: '48.2k', cost: '$0.00' },
@@ -53,6 +62,115 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
   const [filterType, setFilterType] = useState<EventTypeFilter>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredAgentId, setHoveredAgentId] = useState<AgentId | null>(null);
+
+  // Vertical Height and Collapse States
+  const [height, setHeight] = useState<number>(() => {
+    const saved = localStorage.getItem('antigravity_bottom_dock_height');
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= MIN_HEIGHT && parsed <= MAX_HEIGHT) {
+        return parsed;
+      }
+    }
+    return DEFAULT_HEIGHT;
+  });
+
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('antigravity_bottom_dock_collapsed') === 'true';
+  });
+
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isMaximized, setIsMaximized] = useState<boolean>(false);
+  const preMaximizedHeight = useRef<number>(height);
+
+  // Mouse Drag Handler to resize vertical height
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    const startY = e.clientY;
+    const initialHeight = isCollapsed ? COLLAPSED_HEIGHT : height;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = startY - moveEvent.clientY;
+      const targetHeight = initialHeight + deltaY;
+
+      // If dragged below 85px, snap to collapsed
+      if (targetHeight < 85) {
+        setIsCollapsed(true);
+        localStorage.setItem('antigravity_bottom_dock_collapsed', 'true');
+        return;
+      }
+
+      // If dragged above 95px while collapsed, expand
+      if (isCollapsed && targetHeight >= 95) {
+        setIsCollapsed(false);
+        localStorage.setItem('antigravity_bottom_dock_collapsed', 'false');
+      }
+
+      const clampedHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, targetHeight));
+      setHeight(clampedHeight);
+      localStorage.setItem('antigravity_bottom_dock_height', String(clampedHeight));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleToggleCollapse = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('antigravity_bottom_dock_collapsed', String(next));
+      return next;
+    });
+  }, []);
+
+  const handleTabClick = (tab: 'log' | 'files' | 'terminal' | 'git' | 'metrics') => {
+    setActiveTab(tab);
+    if (isCollapsed) {
+      setIsCollapsed(false);
+      localStorage.setItem('antigravity_bottom_dock_collapsed', 'false');
+    }
+  };
+
+  const handleToggleMaximize = () => {
+    if (isCollapsed) {
+      setIsCollapsed(false);
+      localStorage.setItem('antigravity_bottom_dock_collapsed', 'false');
+    }
+    if (isMaximized) {
+      setHeight(preMaximizedHeight.current);
+      setIsMaximized(false);
+      localStorage.setItem('antigravity_bottom_dock_height', String(preMaximizedHeight.current));
+    } else {
+      preMaximizedHeight.current = height;
+      const maxH = Math.min(MAX_HEIGHT, Math.round(window.innerHeight * 0.65));
+      setHeight(maxH);
+      setIsMaximized(true);
+      localStorage.setItem('antigravity_bottom_dock_height', String(maxH));
+    }
+  };
+
+  // Keyboard shortcut: Ctrl+J / Cmd+J to toggle bottom panel collapse
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        handleToggleCollapse();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleToggleCollapse]);
 
   const [terminalInput, setTerminalInput] = useState('');
   const [terminalHistory, setTerminalHistory] = useState<string[]>([
@@ -110,13 +228,26 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
   });
 
   return (
-    <div className="bottom-telemetry-dock">
+    <div
+      className={`bottom-telemetry-dock ${isCollapsed ? 'dock-collapsed' : ''} ${isDragging ? 'is-resizing' : ''}`}
+      style={{ height: isCollapsed ? COLLAPSED_HEIGHT : height }}
+    >
+      {/* Draggable Vertical Resize Handle */}
+      <div
+        className="btd-resize-handle"
+        onMouseDown={handleResizeStart}
+        onDoubleClick={handleToggleCollapse}
+        title="Drag up/down to adjust vertical height • Double-click to collapse/expand (Ctrl+J)"
+      >
+        <div className="btd-resize-grip" />
+      </div>
+
       {/* Tabs & Filter Bar */}
       <div className="btd-header">
         <div className="btd-tabs-row">
           <button
             className={`btd-tab ${activeTab === 'log' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('log')}
+            onClick={() => handleTabClick('log')}
           >
             <Activity size={12} />
             <span>Event Log</span>
@@ -124,7 +255,7 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
 
           <button
             className={`btd-tab ${activeTab === 'files' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('files')}
+            onClick={() => handleTabClick('files')}
           >
             <FileCode size={12} />
             <span>Files {gitStatus?.modifiedFiles.length ? `(${gitStatus.modifiedFiles.length})` : ''}</span>
@@ -132,7 +263,7 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
 
           <button
             className={`btd-tab ${activeTab === 'terminal' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('terminal')}
+            onClick={() => handleTabClick('terminal')}
           >
             <Terminal size={12} />
             <span>Terminal</span>
@@ -140,7 +271,7 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
 
           <button
             className={`btd-tab ${activeTab === 'git' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('git')}
+            onClick={() => handleTabClick('git')}
           >
             <GitBranch size={12} />
             <span>Git ({gitStatus?.currentBranch || 'main'})</span>
@@ -148,69 +279,103 @@ export const BottomTelemetryPanel: React.FC<BottomTelemetryPanelProps> = ({
 
           <button
             className={`btd-tab ${activeTab === 'metrics' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('metrics')}
+            onClick={() => handleTabClick('metrics')}
           >
             <BarChart3 size={12} />
             <span>System Metrics</span>
           </button>
         </div>
 
-        <div className="btd-filters-row">
-          {activeTab === 'log' && (
-            <>
-              {/* Event Type Filter */}
-              <div className="filter-dropdown-box">
-                <Filter size={11} className="dim-icon" />
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value as EventTypeFilter)}
-                  className="dock-select"
-                >
-                  <option value="ALL">All Event Types</option>
-                  <option value="STATUS">State Transitions</option>
-                  <option value="MESSAGE">Inter-Agent Messages</option>
-                  <option value="TASK">Task Stages</option>
-                  <option value="FILE">File Modifications</option>
-                  <option value="ERROR">Errors & Retries</option>
-                </select>
-              </div>
+        <div className="btd-header-right">
+          <div className="btd-filters-row">
+            {activeTab === 'log' && !isCollapsed && (
+              <>
+                {/* Event Type Filter */}
+                <div className="filter-dropdown-box">
+                  <Filter size={11} className="dim-icon" />
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value as EventTypeFilter)}
+                    className="dock-select"
+                  >
+                    <option value="ALL">All Event Types</option>
+                    <option value="STATUS">State Transitions</option>
+                    <option value="MESSAGE">Inter-Agent Messages</option>
+                    <option value="TASK">Task Stages</option>
+                    <option value="FILE">File Modifications</option>
+                    <option value="ERROR">Errors & Retries</option>
+                  </select>
+                </div>
 
-              {/* Agent Filter */}
-              <div className="filter-dropdown-box">
-                <select
-                  value={filterAgent}
-                  onChange={(e) => setFilterAgent(e.target.value)}
-                  className="dock-select"
-                >
-                  <option value="all">All Agents</option>
-                  <option value="orchestrator">Gemini (Orchestrator)</option>
-                  <option value="design">Claude (Design & UX)</option>
-                  <option value="coder">GPT-4o (Backend & Code)</option>
-                  <option value="research">Perplexity (Research)</option>
-                  <option value="tester">Llama (Testing & Review)</option>
-                </select>
-              </div>
+                {/* Agent Filter */}
+                <div className="filter-dropdown-box">
+                  <select
+                    value={filterAgent}
+                    onChange={(e) => setFilterAgent(e.target.value)}
+                    className="dock-select"
+                  >
+                    <option value="all">All Agents</option>
+                    <option value="orchestrator">Gemini (Orchestrator)</option>
+                    <option value="design">Claude (Design & UX)</option>
+                    <option value="coder">GPT-4o (Backend & Code)</option>
+                    <option value="research">Perplexity (Research)</option>
+                    <option value="tester">Llama (Testing & Review)</option>
+                  </select>
+                </div>
 
-              {/* Search Box */}
-              <div className="filter-search-box">
-                <Search size={11} className="dim-icon" />
-                <input
-                  type="text"
-                  placeholder="Search events..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="dock-search-input"
-                />
-              </div>
-            </>
-          )}
+                {/* Search Box */}
+                <div className="filter-search-box">
+                  <Search size={11} className="dim-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search events..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="dock-search-input"
+                  />
+                </div>
+              </>
+            )}
 
-          {activeTab === 'metrics' && (
-            <div className="metric-token-summary">
-              <Coins size={12} color="#f59e0b" />
-              <span>Session: <strong>{(sessionTokens / 1000).toFixed(1)}k tokens</strong> (${sessionCost.toFixed(2)})</span>
+            {activeTab === 'metrics' && !isCollapsed && (
+              <div className="metric-token-summary">
+                <Coins size={12} color="#f59e0b" />
+                <span>
+                  Session: <strong>{(sessionTokens / 1000).toFixed(1)}k tokens</strong> (${sessionCost.toFixed(2)})
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Collapsed State Quick Status Indicator */}
+          {isCollapsed && (
+            <div className="btd-collapsed-status-pill">
+              <span className="online-indicator-dot"></span>
+              <span>{activeAgentsCount}/4 Agents Active</span>
             </div>
           )}
+
+          {/* Action Controls: Maximize/Restore & Collapse/Expand */}
+          <div className="btd-controls-row">
+            {!isCollapsed && (
+              <button
+                className="btd-control-btn"
+                onClick={handleToggleMaximize}
+                title={isMaximized ? 'Restore default height' : 'Maximize height'}
+              >
+                {isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+              </button>
+            )}
+
+            <button
+              className={`btd-control-btn btd-collapse-btn ${isCollapsed ? 'is-collapsed' : ''}`}
+              onClick={handleToggleCollapse}
+              title={isCollapsed ? 'Expand pane (drag handle or click to open • Ctrl+J)' : 'Collapse pane (Ctrl+J)'}
+            >
+              {isCollapsed ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              <span className="btd-control-label">{isCollapsed ? 'Expand' : 'Collapse'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
