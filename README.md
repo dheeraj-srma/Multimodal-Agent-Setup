@@ -41,6 +41,14 @@
 
 The **AI Agent Command Center (ACC)** is an enterprise-grade desktop environment that manages parallel agent teams. Instead of waiting sequentially on single LLM generations, ACC splits complex developer goals across **5 specialized autonomous agents** executing concurrently with sub-pixel visual telemetry.
 
+<p align="center">
+  <img src="Screenshots/Main%20App.png" alt="AI Agent Command Center - Main Application HUD" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 1: Full AI Agent Command Center (ACC) Mission Control interface featuring the Directive Deck, SVG Swarm Topology Canvas, Live Event Feed, and Real-Time Telemetry Dock.</em>
+</p>
+
+
 ```text
 ╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║                                AI AGENT COMMAND CENTER (ACC) • MISSION CONTROL HUD                                 ║
@@ -288,6 +296,13 @@ Each agent has a tailored role, dedicated color identity, live resource metrics,
 | **🔬 Research** | **Leaf** | `#fb923c` (Orange) | `Sonar Deep Research` | Investigates technical documentation, audits algorithmic complexity, checks library compatibilities, returns structured findings. |
 | **🧪 Tester** | **Leaf** | `#f43f5e` (Rose) | `Llama 3.1 405B` | Executes accessibility tests, measures performance regressions, checks code correctness, validates build artifacts. |
 
+<p align="center">
+  <img src="Screenshots/Agents.png" alt="Swarm Operational Roster - 5 Active Agents" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 2: Swarm Operational Roster view showcasing the 5 specialized agent fleet cards, live activity status badges, CPU/RAM telemetry sparklines, and modified files tracking.</em>
+</p>
+
 ### 🔄 Agent Operational Lifecycle & State Machine
 
 ```text
@@ -345,6 +360,13 @@ ACC supports running different models from different frontier providers simultan
 └───────────────────────┴──────────────┴───────────────┴──────────────┴──────────────────┘
 ```
 
+<p align="center">
+  <img src="Screenshots/Sytem%20Configuration.png" alt="Multi-Model Swarm Architecture Configuration Modal" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 3: Multi-Model Swarm Architecture configuration modal — enabling one-click topology preset selection, individual provider assignments, and concurrency limits.</em>
+</p>
+
 ### Pre-Configured Topology Presets
 1. **Different Providers (Cross-Provider Swarm)**: Dispatches each agent to the best-in-class frontier model for its specific task.
 2. **Same Model (All Gemini Antigravity Native)**: Uses your native Google Antigravity subscription across all 5 agents with **$0.00 external API cost**.
@@ -357,6 +379,14 @@ ACC supports running different models from different frontier providers simultan
 ## 🖱 Interactive Canvas & Floating Pop-up Menu
 
 Clicking any agent card on the canvas opens the inspection menu as an anchored floating pop-up window positioned directly adjacent to the node:
+
+<p align="center">
+  <img src="Screenshots/Agent_Details.png" alt="Side-by-Side Floating Agent Inspector Pop-up" width="70%" />
+</p>
+<p align="center">
+  <em>Figure 4: Anchored Side-by-Side Floating Inspector — dynamically positioned adjacent to the clicked agent node, featuring model assignment, resource telemetry, direct operator directive injection, and real-time activity stream.</em>
+</p>
+
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
@@ -428,6 +458,34 @@ Clicking any agent card on the canvas opens the inspection menu as an anchored f
   - **Live Follow**: Moving an agent node moves its open menu along with it.
   - **Dismissal**: Click the `[✕]` button, click anywhere on the empty canvas backdrop, or press `Escape`.
 
+### 📊 Real-Time Telemetry Dock & Multi-Tab Observability
+
+The collapsible and resizable bottom telemetry dock provides three dedicated operational tabs for deep swarm monitoring:
+
+#### 1. System Metrics & Live Oscilloscope
+<p align="center">
+  <img src="Screenshots/Bottom%20Panel%20System%20Metrics.png" alt="Bottom Panel - System Metrics & Live Oscilloscope" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 5: System Metrics dock displaying live CPU and RAM resource gauges, active file conflict monitoring, and the real-time green oscilloscope bandwidth waveform.</em>
+</p>
+
+#### 2. Live Event Log Stream & Telemetry Feed
+<p align="center">
+  <img src="Screenshots/Bottom_Panel-Event%20Logs.png" alt="Bottom Panel - Event Logs Stream" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 6: High-frequency Event Log stream with severity filtering (All, Info, Warn, Error), live search, timestamping, and formatted agent event payloads.</em>
+</p>
+
+#### 3. Workspace File Mutation & Conflict Watcher
+<p align="center">
+  <img src="Screenshots/Bottom%20Panel-%20Files.png" alt="Bottom Panel - Files & Mutation Tracker" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 7: Files telemetry tab monitoring live agent file locks, additions, deletions, line-span mutations, and multi-agent safety boundaries.</em>
+</p>
+
 ---
 
 ## 🗂 The 6 Dedicated Sidebar Workspace Views
@@ -479,6 +537,22 @@ Switch between specialized operational dashboards with zero page reloads:
 ║                      ║ └──────────────────────────────────────────────────────────────────────────────────────┘  ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
+
+### 📁 Workspace Files Explorer & Diff Inspector
+<p align="center">
+  <img src="Screenshots/Workspace.png" alt="Workspace Files Explorer and Diff Inspector" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 8: Dedicated Workspace Files view displaying full project directory trees, agent file change indicators, syntax-highlighted diffs, and protected path shields.</em>
+</p>
+
+### 🐙 Integrated Git Version Control & Commit Deck
+<p align="center">
+  <img src="Screenshots/Github%20Controll.png" alt="Integrated Git Version Control and Commit Deck" width="100%" />
+</p>
+<p align="center">
+  <em>Figure 9: Integrated Git Operations center featuring branch synchronization status, atomic commit creator, unstaged change diffs, and historical commit timeline.</em>
+</p>
 
 ---
 
