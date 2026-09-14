@@ -22,45 +22,90 @@
 
 ## 📑 Table of Contents
 
-1. [System Overview](#-system-overview)
+1. [System Overview & Control Deck](#-system-overview--control-deck)
 2. [Visual Architecture & Swarm Hierarchy](#-visual-architecture--swarm-hierarchy)
-3. [The 5 Specialized Swarm Agents](#-the-5-specialized-swarm-agents)
-4. [Multi-Model Topology & Pricing Matrix](#-multi-model-topology--pricing-matrix)
-5. [Interactive Canvas & Floating Pop-up Menu](#-interactive-canvas--floating-pop-up-menu)
-6. [The 6 Dedicated Sidebar Workspace Views](#-the-6-dedicated-sidebar-workspace-views)
-7. [Step-by-Step Operator Guide](#-step-by-step-operator-guide)
-8. [Workspace Safety & Collision Prevention](#-workspace-safety--collision-prevention)
-9. [Developer Scripts & Test Suite](#-developer-scripts--test-suite)
-10. [Repository Structure](#-repository-structure)
+3. [Autonomous Execution Pipeline & Data Flow](#-autonomous-execution-pipeline--data-flow)
+4. [The 5 Specialized Swarm Agents](#-the-5-specialized-swarm-agents)
+5. [Multi-Model Topology & Pricing Matrix](#-multi-model-topology--pricing-matrix)
+6. [Interactive Canvas & Floating Pop-up Menu](#-interactive-canvas--floating-pop-up-menu)
+7. [The 6 Dedicated Sidebar Workspace Views](#-the-6-dedicated-sidebar-workspace-views)
+8. [Step-by-Step Operator Guide](#-step-by-step-operator-guide)
+9. [Workspace Safety & Collision Prevention](#-workspace-safety--collision-prevention)
+10. [Central EventBus & IPC System Architecture](#-central-eventbus--ipc-system-architecture)
+11. [Developer Scripts & Test Suite](#-developer-scripts--test-suite)
+12. [Repository Structure](#-repository-structure)
 
 ---
 
-## 🔭 System Overview
+## 🔭 System Overview & Control Deck
 
-The **AI Agent Command Center (ACC)** is an enterprise-grade desktop environment that manages parallel agent teams. Instead of waiting sequentially on single LLM generations, ACC splits complex objectives (e.g. *"Audit this project, formulate modern UI architecture, implement performance optimizations, and run accessibility regressions"*) across **5 specialized autonomous agents** running concurrently.
+The **AI Agent Command Center (ACC)** is an enterprise-grade desktop environment that manages parallel agent teams. Instead of waiting sequentially on single LLM generations, ACC splits complex developer goals across **5 specialized autonomous agents** executing concurrently with sub-pixel visual telemetry.
 
 ```text
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│                            ACC DESKTOP RUNTIME STACK                             │
-│                                                                                  │
-│   ┌───────────────────────────────────┐        ┌─────────────────────────────┐   │
-│   │     REACT 18 RENDERER (VITE)      │  IPC   │     ELECTRON MAIN PROCESS   │   │
-│   │                                   │ ◄────► │                             │   │
-│   │  - Draggable Multi-Model Canvas   │        │  - Native File System I/O   │   │
-│   │  - Floating Agent Inspectors      │        │  - Local Git CLI Subprocess │   │
-│   │  - 6 Dedicated Workspace Views    │        │  - WAL Persistent Storage   │   │
-│   │  - Live Oscilloscope Waveforms    │        │  - Window Frame & Menus     │   │
-│   └─────────────────┬─────────────────┘        └──────────────┬──────────────┘   │
-│                     │                                         │                  │
-│                     ▼                                         ▼                  │
-│   ┌──────────────────────────────────────────────────────────────────────────┐   │
-│   │                           CORE AGENT RUNTIME                             │   │
-│   │                                                                          │   │
-│   │   [ Central Typed EventBus ] ────► [ Dynamic DAG Scheduler ]             │   │
-│   │   [ WorkspaceSafety Engine ] ────► [ Real-Time Parallelism Tracker ]     │   │
-│   │   [ Multi-Model Router     ] ────► [ Local Static Heuristic Engine ]     │   │
-│   └──────────────────────────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────────────────────────────┘
+╔═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                     🛸 AI AGENT COMMAND CENTER (ACC)                                          ║
+╠═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
+║ ⬡ SWARM: 5 ACTIVE  │  ⏱ MISSION: 00:14:32  │  ⚡ SPEEDUP: 2.8x  │  🪙 TOKENS: 142.5k  │  💲 SPEND: $0.000  │  [ ⏸ PAUSE ] [ ■ STOP ] ║
+╠═══════════════════╦══════════════════════════════════════════════════════════════════════════════════════╦════════════════════════════╣
+║ 🧭 WORKSPACE VIEW ║  🎯 MISSION DIRECTIVE DECK                                                           ║  📡 LIVE DIRECTIVE FEED    ║
+║                   ║  ┌────────────────────────────────────────────────────────────────────────────────┐  ║                            ║
+║  ▶ Mission Ctrl   ║  │ "Refactor auth flow, audit WCAG contrast, benchmark AST parser, & add tests"   │  ║  [11:04:12] 🧠 @orchestrator ║
+║  ○ Agents Roster  ║  └───────────────────────────────────────────────────────────────┬────────────────┘  ║  Task decomposed: 5 stages ║
+║  ○ Task Pipeline  ║                                                                  │ [ ▶ RUN MISSION ] ║                            ║
+║  ○ Workspace Files║  ────────────────────────────────────────────────────────────────┴─────────────────  ║  [11:04:15] 🎨 @design      ║
+║  ○ Git Operations ║  🛰 MULTI-MODEL TOPOLOGY CANVAS                                  [ Auto Arrange ⟲ ]  ║  Design tokens generated   ║
+║  ○ System Settings║                                                                                      ║                            ║
+║                   ║                                   ╭─────────────────────────────╮                        ║  [11:04:18] 💻 @coder       ║
+║ ───────────────── ║                                   │    🧠 APEX ORCHESTRATOR     │  (Gemini 1.5 Pro)     ║  AST mutations dispatched  ║
+║ ⚏ MODEL TOPOLOGY  ║                                   │    Status: WORKING • 34%    │  48.2k tok • CPU 34%  ║                            ║
+║                   ║                                   ╰──────────────┬──────────────╯                        ║  [11:04:22] 🔬 @research    ║
+║  ◉ Cross-Provider ║                                                  │                                       ║  12 citations indexed      ║
+║  ○ All Gemini Pro ║                         ┌────────────────────────┴────────────────────────┐              ║                            ║
+║  ○ All Claude 3.5 ║                         ▼ ─── (12 KB/s) ───►                              ▼ ─── (28 KB/s) ║  [11:04:25] 🧪 @tester      ║
+║  ○ Local Ollama   ║            ╭───────────────────────────╮                     ╭───────────────────────────╮║  WCAG audit: 98% passed    ║
+║                   ║            │   🎨 DESIGN & UX AGENT    │ ◄─── ⟲ 3 Cycles ──► │   💻 CODER & BACKEND      │║                            ║
+║ ───────────────── ║            │   Claude 3.5 Sonnet       │  Spec Negotiation   │   GPT-4o                  │║ ────────────────────────── ║
+║ 📊 ACTIVE ROSTER  ║            │   Status: WORKING • 78%   │  Contract Alignment │   Status: WORKING • 62%   │║ 💬 OPERATOR DISPATCH       ║
+║                   ║            ╰─────────────┬─────────────╯                     ╰─────────────┬─────────────╯║                            ║
+║  ● Gemini 1.5 Pro ║                          │ ─── (8 KB/s) ───►                               │ ─── (44 KB/s)║  ┌──────────────────────┐  ║
+║  ● Claude Sonnet  ║                          ▼                                                 ▼              ║  │ Message all agents...│> ║
+║  ● GPT-4o         ║            ╭───────────────────────────╮                     ╭───────────────────────────╮║  └──────────────────────┘  ║
+║  ● Sonar Research ║            │   🔬 RESEARCH AGENT       │                     │   🧪 TEST & REVIEW        │║                            ║
+║  ● Llama 3.1 405B ║            │   Sonar Deep Research     │                     │   Llama 3.1 405B          │║  ⌨ Shortcuts:              ║
+║                   ║            │   Status: COMPLETED 100%  │                     │   Status: WORKING • 45%   │║  Enter: Dispatch message   ║
+║                   ║            ╰───────────────────────────╯                     ╰───────────────────────────╯║  Alt+P: Pause Swarm        ║
+╠═══════════════════╩══════════════════════════════════════════════════════════════════════════════════════╩════════════════════════════╣
+║ ⚡ TELEMETRY DOCK: ~~~/\_/\~~~ Oscilloscope Active  │  Branch: main (✓ synced)  │  CPU: 42%  │  RAM: 1.4 GB  │  Workspace Safety: 0 Collisions ║
+╚═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+```
+
+### 🧱 Architectural Runtime Stack
+
+```text
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                            ACC DESKTOP RUNTIME STACK                                             │
+├──────────────────────────────────────────────────────┬───────────────────────────────────────────────────────────┤
+│               REACT 18 RENDERER (VITE)               │                   ELECTRON MAIN PROCESS                   │
+│                                                      │                                                           │
+│  • Draggable Multi-Model Topology Canvas (SVG Splines)│  • Native Node.js File System Bridge (IPC)               │
+│  • Side-by-Side Floating Agent Pop-up Menu           │  • Local Git CLI Subprocess Wrapper & Diffs Engine        │
+│  • 6 Dedicated Full-Screen Workspace Views           │  • Write-Ahead-Log (WAL) Persistent File Store            │
+│  • Real-Time Oscilloscope Waveform & Dock Telemetry  │  • Native Window Management & Custom Titlebar             │
+├──────────────────────────────────────────────────────┴───────────────────────────────────────────────────────────┤
+│                                                CORE AGENT RUNTIME                                                │
+│                                                                                                                  │
+│  ┌──────────────────────────────┐  ┌──────────────────────────────┐  ┌────────────────────────────────────────┐  │
+│  │     CENTRAL TYPED EVENTBUS   │  │    DYNAMIC DAG SCHEDULER     │  │        WORKSPACESAFETY ENGINE          │  │
+│  │ Asynchronous Pub/Sub broker  │  │ Autonomous goal breakdown,   │  │ Line-span overlap detection, concurrent│  │
+│  │ for state, logs, & telemetry │  │ dependency chains, & workers │  │ file locks, & 4-way merge resolver     │  │
+│  └──────────────────────────────┘  └──────────────────────────────┘  └────────────────────────────────────────┘  │
+│                                                                                                                  │
+│  ┌──────────────────────────────┐  ┌──────────────────────────────┐  ┌────────────────────────────────────────┐  │
+│  │    MULTI-MODEL ROUTER        │  │  PARALLELISM TRACKER (MATH)  │  │    LOCAL STATIC HEURISTIC ENGINE       │  │
+│  │ Google Antigravity, Claude,  │  │ Real-time active / total     │  │ Zero-latency mock & test responses     │  │
+│  │ GPT-4o, Ollama Local dispatch│  │ speedup multiplier factor    │  │ for offline development & tests        │  │
+│  └──────────────────────────────┘  └──────────────────────────────┘  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -68,6 +113,42 @@ The **AI Agent Command Center (ACC)** is an enterprise-grade desktop environment
 ## 🏛 Visual Architecture & Swarm Hierarchy
 
 The swarm is structured in a clear **NASA Mission Control pyramid hierarchy**, connected by dynamic, flowing cubic Bezier splines:
+
+```text
+                                 ┌────────────────────────────────────────┐
+                                 │       [APEX LEVEL 1: ORCHESTRATION]    │
+                                 │         🧠 APEX ORCHESTRATOR           │
+                                 │   Model: Gemini 1.5 Pro (2M Context)   │
+                                 │   Role: Decomposition & Synthesis      │
+                                 │   Pos: (500, 75) • Cyan Border #38bdf8 │
+                                 └───────────────────┬────────────────────┘
+                                                     │
+                             ┌───────────────────────┴───────────────────────┐
+                             │                                               │
+               Cubic Bezier Spline                             Cubic Bezier Spline
+             Flow: [ ──► 12 KB/s ──► ]                       Flow: [ ──► 28 KB/s ──► ]
+                             │                                               │
+                             ▼                                               ▼
+              ┌─────────────────────────────┐                 ┌─────────────────────────────┐
+              │ [MID LEVEL 2: SPECIFICATION]│                 │ [MID LEVEL 2: SYNTHESIS]    │
+              │    🎨 DESIGN & UX AGENT     │ ◄─────────────► │    💻 CODER & BACKEND       │
+              │ Model: Claude 3.5 Sonnet    │   ⟲ 3 Cycles    │ Model: GPT-4o               │
+              │ Role: Specs, Tokens & Wire  │  Bidirectional  │ Role: AST & Implementation  │
+              │ Pos: (260, 240) • #c084fc   │ Spec Negotiation│ Pos: (740, 240) • #34d399   │
+              └──────────────┬──────────────┘                 └──────────────┬──────────────┘
+                             │                                               │
+               Cubic Bezier Spline                             Cubic Bezier Spline
+             Flow: [ ──► 8 KB/s ──► ]                        Flow: [ ──► 44 KB/s ──► ]
+                             │                                               │
+                             ▼                                               ▼
+              ┌─────────────────────────────┐                 ┌─────────────────────────────┐
+              │ [LEAF LEVEL 3: RESEARCH]    │                 │ [LEAF LEVEL 3: AUDITING]    │
+              │    🔬 RESEARCH AGENT        │                 │    🧪 TEST & REVIEW         │
+              │ Model: Sonar Deep Research  │                 │ Model: Llama 3.1 405B       │
+              │ Role: Citations & Benchmarks│                 │ Role: Regressions & WCAG    │
+              │ Pos: (200, 420) • #fb923c   │                 │ Pos: (800, 420) • #f43f5e   │
+              └─────────────────────────────┘                 └─────────────────────────────┘
+```
 
 ```mermaid
 graph TD
@@ -99,6 +180,106 @@ graph TD
 
 ---
 
+## ⚡ Autonomous Execution Pipeline & Data Flow
+
+How a high-level developer prompt flows through autonomous decomposition, parallel dispatch, collision guarding, and git synthesis:
+
+```text
+STAGE 1: OPERATOR INTENT INGESTION
+╭─────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                    OPERATOR DIRECTIVE                                       │
+│ "Refactor auth flow, audit WCAG contrast, benchmark AST parser, & add verification tests"   │
+╰──────────────────────────────────────────────┬──────────────────────────────────────────────╯
+                                               │
+                                               ▼
+STAGE 2: DYNAMIC DAG DECOMPOSITION & PLANNING
+                                ╭─────────────────────────────╮
+                                │    🧠 APEX ORCHESTRATOR     │
+                                │  • AST Goal Decomposition   │
+                                │  • Dependency Graphing (DAG)│
+                                │  • Concurrency Scheduler    │
+                                ╰──────────────┬──────────────╯
+                                               │
+                        ┌──────────────────────┴──────────────────────┐
+                        │ [PARALLEL CONCURRENT DISPATCH]              │
+                        ▼                                             ▼
+STAGE 3: INDEPENDENT CONCURRENT WORKSTREAMS
+         ╭───────────────────────────╮                 ╭───────────────────────────╮
+         │    🔬 RESEARCH AGENT      │                 │    🎨 DESIGN & UX AGENT   │
+         │  • Technical Benchmarks   │                 │  • HSL Design Tokens      │
+         │  • Algorithm Complexity   │                 │  • WCAG Contrast Specs    │
+         │  • 12 Citations Indexed   │                 │  • Visual Hierarchy Rules │
+         ╰─────────────┬─────────────╯                 ╰─────────────┬─────────────╯
+                       │                                             │
+                       │ Empirical Findings                          │ Wireframes & Specs
+                       │ Payload (JSON)                              ▼
+STAGE 4: CONTRACT NEGOTIATION & CODE SYNTHESIS
+                       │                               ╭───────────────────────────╮
+                       │                               │    💻 CODER & BACKEND     │
+                       │           ⟲ 3 Cycles          │  • AST Code Transformation│
+                       │   Bi-Directional Negotiation  │  • Unified Patch Creation │
+                       │ ◄───────────────────────────► │  • Atomic File Mutation   │
+                       │                               ╰─────────────┬─────────────╯
+                       │                                             │
+                       │                                             │ Source Diff Payload
+                       ▼                                             ▼
+STAGE 5: VERIFICATION & AUDIT RUNNERS
+         ╭───────────────────────────╮                 ╭───────────────────────────╮
+         │  RESEARCH EMPIRICAL LOGS  │                 │    🧪 TEST & REVIEW       │
+         │  • Benchmark Comparisons  │                 │  • WCAG 2.1 AAA Audits    │
+         │  • Memory Profiles        │                 │  • Regression Verifier    │
+         ╰─────────────┬─────────────╯                 │  • 12/12 Tests Passing    │
+                       │                               ╰─────────────┬─────────────╯
+                       │                                             │
+                       └──────────────────────┬──────────────────────┘
+                                              │
+                                              ▼
+STAGE 6: WORKSPACE SAFETY, COLLISION ARBITRATION & GIT PERSISTENCE
+                               ╭─────────────────────────────╮
+                               │   🛡 WORKSPACESAFETY GUARD   │
+                               │  • Concurrent Line Locking  │
+                               │  • AST Overlap Interception │
+                               │  • Path Permission Shields  │
+                               ╰──────────────┬──────────────╯
+                                              │ Verified Safe Diffs
+                                              ▼
+                               ╭─────────────────────────────╮
+                               │   🐙 LOCAL GIT ENGINE       │
+                               │  • Unified Workspace Diff   │
+                               │  • Operator Commit Staging  │
+                               │  • Markdown Synthesis (.md) │
+                               ╰─────────────────────────────╯
+```
+
+### ⚡ Concurrency Benchmark: Sequential vs. ACC Swarm
+
+```text
+════════════════════════════════════════════════════════════════════════════════════════════════════════════
+                        CONCURRENCY BENCHMARK: SEQUENTIAL vs. ACC SWARM
+════════════════════════════════════════════════════════════════════════════════════════════════════════════
+
+[TRADITIONAL SEQUENTIAL EXECUTION: ~48.0s Total Runtime]
+Orchestrator   [■■■ 6s]
+Research               [■■■■■■■■■■■■ 24s]
+Design                                   [■■■■■■ 12s]
+Coder                                                [■■■■■■■■ 16s]
+Tester                                                             [■■■■■■ 12s]
+Git Synthesis                                                                 [■■■ 6s]
+Timeline (s)   0s ──── 10s ──── 20s ──── 30s ──── 40s ──── 50s ──── 60s ──── 70s ──── 80s
+
+[ACC AUTONOMOUS SWARM PARALLEL EXECUTION: ~17.5s Total Runtime (2.74x SPEEDUP ⚡)]
+Orchestrator   [■■■ 5s]
+Research               [■■■■■■■■■■■■ 12s (Parallel)]
+Design                 [■■■■■■ 6s (Parallel)]
+Coder                         [■■■■■■■■ 8s (Spec Stream)]
+Tester                               [■■■■■■ 6s (Incremental)]
+Git Synthesis                                 [■■■ 3.5s]
+Timeline (s)   0s ──── 5s ───── 10s ──── 15s ───► [MISSION COMPLETE: 17.5s]
+════════════════════════════════════════════════════════════════════════════════════════════════════════════
+```
+
+---
+
 ## 👥 The 5 Specialized Swarm Agents
 
 Each agent has a tailored role, dedicated color identity, live resource metrics, and token tracking:
@@ -110,6 +291,42 @@ Each agent has a tailored role, dedicated color identity, live resource metrics,
 | **💻 Coder** | **Mid** | `#34d399` (Emerald) | `GPT-4o` | Translates specifications into code, performs AST modifications, creates minimal diffs, resolves conflict hunks. |
 | **🔬 Research** | **Leaf** | `#fb923c` (Orange) | `Sonar Deep Research` | Investigates technical documentation, audits algorithmic complexity, checks library compatibilities, returns structured findings. |
 | **🧪 Tester** | **Leaf** | `#f43f5e` (Rose) | `Llama 3.1 405B` | Executes accessibility tests, measures performance regressions, checks code correctness, validates build artifacts. |
+
+### 🔄 Agent Operational Lifecycle & State Machine
+
+```text
+                     AGENT OPERATIONAL LIFECYCLE & STATE MACHINE
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                        │
+│     ┌───────────┐         Task Ingestion          ┌───────────┐                        │
+│     │   IDLE    │ ──────────────────────────────► │  QUEUED   │                        │
+│     └─────▲─────┘                                 └─────┬─────┘                        │
+│           │                                             │ Worker Thread                │
+│           │ Mission Reset                               │ Allocation                   │
+│           │                                             ▼                              │
+│     ┌─────┴─────┐                                 ┌───────────┐                        │
+│     │   RESET   │                                 │  WORKING  │ ◄──────────┐           │
+│     └─────▲─────┘                                 └─────┬─────┘            │           │
+│           │                                             │                  │           │
+│           │                      ┌──────────────────────┼─────────────┐    │ Retry /   │
+│           │                      │                      │             │    │ Re-prompt │
+│           │                      ▼                      ▼             ▼    │           │
+│           │               ┌─────────────┐       ┌─────────────┐ ┌──────────┴───┐       │
+│           │               │ WAITING_IO  │       │ COLLISION   │ │    FAILED    │       │
+│           │               │ (Sub-task)  │       │ (File Lock) │ │ (API/Syntax) │       │
+│           │               └──────┬──────┘       └──────┬──────┘ └──────────────┘       │
+│           │                      │ Task Return         │ Arbitrated                    │
+│           │                      ▼                     ▼                               │
+│           │               ┌─────────────┐       ┌─────────────┐                        │
+│           │               │ COMPLETED   │ ◄─────┤  RESOLVED   │                        │
+│           │               └──────┬──────┘       └─────────────┘                        │
+│           │                      │ All Sub-tasks Pass                                  │
+│           │                      ▼                                                     │
+│           └───────────────┌─────────────┐                                              │
+│                           │ SYNTHESIZED │                                              │
+│                           └─────────────┘                                              │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -144,32 +361,63 @@ ACC supports running different models from different frontier providers simultan
 
 ## 🖱 Interactive Canvas & Floating Pop-up Menu
 
+Clicking any agent card on the canvas opens the inspection menu as an anchored floating pop-up window positioned directly adjacent to the node:
+
 ```text
-       ┌────────────────────┐
-       │ 🎨 Design Agent    │ ◄─── (Click agent node to open menu)
-       └─────────┬──────────┘
-                 │
-                 │   ┌──────────────────────────────────────────────┐
-                 └──►│ 🎨 Design Agent @design                  [X] │
-                     ├──────────────────────────────────────────────┤
-                     │ ⚏ ASSIGNED: [Claude 3.5 Sonnet (Anthropic) v]│
-                     ├──────────────────────────────────────────────┤
-                     │ [> RESUME]      [⟲ RETRY]       [□ KILL]     │
-                     ├──────────────────────────────────────────────┤
-                     │ TOKEN & COST TRACKING                        │
-                     │ Prompt: 18,400        Completion: 4,200      │
-                     │ Total: 22,600         Spend: $0.000 (Native) │
-                     ├──────────────────────────────────────────────┤
-                     │ RESOURCE ALLOCATION                          │
-                     │ CPU: 38%              Memory: 240 MB         │
-                     │ Progress: 100%        State: COMPLETED       │
-                     ├──────────────────────────────────────────────┤
-                     │ ACTIVE ASSIGNMENT                            │
-                     │ Design Glassmorphism Tokens & UI Specs       │
-                     ├──────────────────────────────────────────────┤
-                     │ DIRECT OPERATOR DIRECTIVE                    │
-                     │ [Send custom prompt to Design Agent...   ] > │
-                     └──────────────────────────────────────────────┘
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                        SIDE-BY-SIDE FLOATING INSPECTOR GEOMETRY                                              ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+[ORIENTATION A: NODE ON LEFT HALF OF CANVAS (x <= canvas.width / 2) ──► POPUP OPENS TO THE RIGHT]
+
+      CANVAS AGENT NODE                                           ANCHORED FLOATING POP-UP MENU
+ ╭──────────────────────────────╮                 ╭──────────────────────────────────────────────────────────╮
+ │ 🎨 Claude 3.5 Sonnet         │                 │ 🎨 Design Agent  @design                             [✕] │
+ │ DESIGN & UX                  │                 ├──────────────────────────────────────────────────────────┤
+ │ Working... 78%               │                 │ ⚏ ASSIGNED: [ Claude 3.5 Sonnet (Anthropic)           ▼ ] │
+ │ ──────────────────────────── │                 ├──────────────────────────────────────────────────────────┤
+ │ ▃▅█▃▅▆▇ CPU 26% • 18.4k tok  │                 │ [ ⏸ PAUSE ]          [ ⟲ RETRY ]          [ ■ KILL ]    │
+ │ ╭──────────────────────────╮ │ ◄─────────────► │ ├──────────────────────────────────────────────────────────┤
+ │ │ UI Specs & Design Tokens │ │  POINTER NOTCH  │ │ 🪙 TOKEN & COST TRACKING                                 │
+ │ ╰──────────────────────────╯ │  [data-placement│ │ ┌───────────────────────────┬──────────────────────────┐ │
+ ╰──────────────────────────────╯     ="left"]    │ │ │ PROMPT TOKENS: 18,400     │ COMPLETION: 4,200        │ │
+                                                  │ │ │ TOTAL TOKENS:  22,600     │ ESTIMATED SPEND: $0.000  │ │
+                                                  │ │ └───────────────────────────┴──────────────────────────┘ │
+                                                  │ ├──────────────────────────────────────────────────────────┤
+                                                  │ │ ⚡ RESOURCE ALLOCATION                                   │
+                                                  │ │ ┌───────────────────────────┬──────────────────────────┐ │
+                                                  │ │ │ CPU USAGE:     38%        │ MEMORY ALLOC: 240 MB     │ │
+                                                  │ │ │ PROGRESS:      100%       │ STATE:        COMPLETED  │ │
+                                                  │ │ └───────────────────────────┴──────────────────────────┘ │
+                                                  │ ├──────────────────────────────────────────────────────────┤
+                                                  │ │ 📌 ACTIVE ASSIGNMENT                                     │
+                                                  │ │ Design Glassmorphism Tokens & Theme Layout               │
+                                                  │ │ ACTION: Generating HSL color scales & typography curves  │
+                                                  │ ├──────────────────────────────────────────────────────────┤
+                                                  │ │ 💬 DIRECT OPERATOR DIRECTIVE                             │
+                                                  │ │ ┌──────────────────────────────────────────────┬───────┐ │
+                                                  │ │ │ Send custom prompt directive to Design...    │ [ ➢ ] │ │
+                                                  │ │ └──────────────────────────────────────────────┴───────┘ │
+                                                  │ ├──────────────────────────────────────────────────────────┤
+                                                  │ │ 📜 ACTIVITY STREAM (15 EVENTS)                           │
+                                                  │ │ [11:04:15] [LOG] Color palettes synthesized             │
+                                                  │ │ [11:04:18] [TASK] UI wireframe specs dispatched          │
+                                                  │ ╰──────────────────────────────────────────────────────────╯
+
+[ORIENTATION B: NODE ON RIGHT HALF OF CANVAS (x > canvas.width / 2) ──► AUTO-FLIPS TO THE LEFT]
+
+      ANCHORED FLOATING POP-UP MENU                                           CANVAS AGENT NODE
+ ╭──────────────────────────────────────────────────────────╮                 ╭──────────────────────────────╮
+ │ 💻 Coder & Backend  @coder                           [✕] │                 │ 💻 GPT-4o                    │
+ ├──────────────────────────────────────────────────────────┤                 │ CODER & BACKEND              │
+ │ ⚏ ASSIGNED: [ GPT-4o (OpenAI Frontier)                ▼ ] │                 │ Working... 62%               │
+ ├──────────────────────────────────────────────────────────┤                 │ ──────────────────────────── │
+ │ [ ⏸ PAUSE ]          [ ⟲ RETRY ]          [ ■ KILL ]    │                 │ ▃▅█▃▅▆▇ CPU 34% • 28.1k tok  │
+ ├──────────────────────────────────────────────────────────┤ ◄─────────────► │ ╭──────────────────────────╮ │
+ │ 🪙 TOKEN & COST TRACKING                                 │  POINTER NOTCH  │ │ AST Refactoring Engine   │ │
+ │ Prompt: 28,100  │  Completion: 8,400  │  Spend: $0.00    │ [data-placement │ ╰──────────────────────────╯ │
+ │ Total Tokens: 36,500                  │  State: WORKING  │    ="right"]    ╰──────────────────────────────╯
+ ╰──────────────────────────────────────────────────────────╯
 ```
 
 ### Dynamic Spatial Features
@@ -180,7 +428,7 @@ ACC supports running different models from different frontier providers simultan
   - Opens right at the agent card's position with a directional pointer notch.
   - **Auto-flipping**: Cards on the left half pop out to the right; cards on the right half pop out to the left.
   - **Live Follow**: Moving an agent node moves its open menu along with it.
-  - **Dismissal**: Click the `[X]` button, click anywhere on the empty canvas backdrop, or press `Escape`.
+  - **Dismissal**: Click the `[✕]` button, click anywhere on the empty canvas backdrop, or press `Escape`.
 
 ---
 
@@ -189,31 +437,51 @@ ACC supports running different models from different frontier providers simultan
 Switch between specialized operational dashboards with zero page reloads:
 
 ```text
-┌─────────────────┐ ┌─────────────────────────────────────────────────────────────┐
-│ 🛸 Mission Ctrl │ │ 1. MISSION CONTROL VIEW                                     │
-│ 👥 Agents       │ │    Directive input deck, Draggable Topology Graph,          │
-│ 📋 Tasks        │ │    Floating Inspectors, and Agent summary cards             │
-│ 📂 Files        │ ├─────────────────────────────────────────────────────────────┤
-│ 🌿 Git          │ │ 2. WORKSPACE FILES & UNIFIED DIFF EXPLORER                  │
-│ ⚙️ Settings      │ │    Filterable file tree (~mod, +add, ?new), unified diff   │
-│                 │ │    syntax viewer, copy button, and inline commit console    │
-│                 │ ├─────────────────────────────────────────────────────────────┤
-│                 │ │ 3. GIT VERSION CONTROL & REPO OPERATIONS                    │
-│                 │ │    Branch ahead/behind status, commit history timeline,     │
-│                 │ │    working tree changes, and repository commit engine       │
-│                 │ ├─────────────────────────────────────────────────────────────┤
-│                 │ │ 4. TASK PIPELINE & DAG BOARD                                │
-│                 │ │    Multi-stage execution flow, dependency tracking,         │
-│                 │ │    progress bars, stage duration, and artifact previews     │
-│                 │ ├─────────────────────────────────────────────────────────────┤
-│                 │ │ 5. ACTIVE AGENT SWARM ROSTER                                │
-│                 │ │    Expanded 5-agent cards with CPU/memory sparklines,       │
-│                 │ │    files touched, message counts, and swarm-wide controls   │
-│                 │ ├─────────────────────────────────────────────────────────────┤
-│                 │ │ 6. SYSTEM CONFIGURATION & PROVIDERS                         │
-│                 │ │    Google Antigravity native status, API credentials,       │
-│                 │ │    Ollama endpoints, concurrency limits, and safety paths   │
-└─────────────────┘ └─────────────────────────────────────────────────────────────┘
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                        CENTRAL WORKSPACE DYNAMIC VIEW SWITCHER                                               ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ SIDEBAR TABS    │ CORRESPONDING WORKSPACE VIEW (FULL-SCREEN IN CENTER COLUMN)                                                │
+├─────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [1] 🛸 Mission   │ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│     Control     │ │  🎯 MISSION DIRECTIVE DECK + RUN BUTTON                                                                │ │
+│     (Active)    │ │  🛰 DRAGGABLE MULTI-MODEL TOPOLOGY CANVAS (DYNAMIC SVG BEZIER SPLINES & PARTICLE FLOW)                 │ │
+│                 │ │  📌 COMPACT AGENT STATUS CARDS + ANCHORED FLOATING INSPECTOR MENUS                                     │ │
+│                 │ └────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+├─────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [2] 👥 Agents    │ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│     Swarm       │ │  SWARM ROSTER (5 AGENTS EXPANDED): [ Resume All ] [ Pause All ] [ Stop All ]                           │ │
+│     Roster      │ │  • Hardware Telemetry Sparklines (▃▅█▃▅▆▇)  • Live CPU % & RAM Allocation                              │ │
+│                 │ │  • Modified Files Touched Tracker           • Inter-Agent Message Counters                             │ │
+│                 │ └────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+├─────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [3] 📋 Task DAG  │ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│     Pipeline    │ │  MULTI-STAGE EXECUTION DAG: [Stage 1: Intent] ──► [Stage 2: DAG] ──► [Stage 3: Parallel Dispatch] ...   │ │
+│     Board       │ │  • Task State Pills: [ RUNNING ] [ QUEUED ] [ COMPLETED 100% ] [ FAILED ]                              │ │
+│                 │ │  • Real-Time Concurrency Math: 2.74x Speedup Multiplier & Execution Duration Timers                     │ │
+│                 │ └────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+├─────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [4] 📂 Workspace │ ┌──────────────────────────────────────┬─────────────────────────────────────────────────────────────────┐ │
+│     Files &     │ │  WORKSPACE FILE TREE (~mod, +add)    │  UNIFIED SYNTAX DIFF VIEWER                                     │ │
+│     Diffs       │ │  ~ src/components/Theme.css          │  @@ -48,7 +48,12 @@                                             │ │
+│                 │ │  + src/agents/Orchestrator.ts        │  - const oldColor = '#fff';                                     │ │
+│                 │ │  🛡 Safety Shields (.git, node_mod)   │  + const glassTheme = 'rgba(11,29,58,0.7)'; [Copy Diff] [Commit]│ │
+│                 │ └──────────────────────────────────────┴─────────────────────────────────────────────────────────────────┘ │
+├─────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [5] 🌿 Git       │ ┌──────────────────────────────────────┬─────────────────────────────────────────────────────────────────┐ │
+│     Version     │ │  BRANCH STATUS: main (Ahead 0, Behind 0)  COMMIT HISTORY TIMELINE                                       │ │
+│     Control     │ │  Working Tree: 2 modified, 0 unmerged│  • 5085dfc (HEAD -> main) docs: comprehensive operator guide    │ │
+│                 │ │  Commit Creator: [Enter message...]  │  • 4d76deb feat: add dedicated workspace views to sidebar       │ │
+│                 │ └──────────────────────────────────────┴─────────────────────────────────────────────────────────────────┘ │
+├─────────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│ [6] ⚙️ System    │ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐ │
+│     Settings &  │ │  AI PROVIDER CONFIG: [ Google Antigravity Native (Active) ] [ Claude ] [ OpenAI ] [ Ollama ]           │ │
+│     Config      │ │  • Target Project Root Path: d:\Projects\Multi Agent Setup                                             │ │
+│                 │ │  • Max Swarm Concurrency: [ 2 Agents ] [ 4 Agents ] [ 8 Agents (Uncapped) ]                            │ │
+│                 │ │  • Collision Arbitration Mode: [ Automatic 3-Way AST Merge ] [ Prompt Operator Modal ]                 │ │
+│                 │ └────────────────────────────────────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -274,7 +542,43 @@ Launches a standalone desktop application with native windowing and IPC file-sys
 
 ## 🛡 Workspace Safety & Collision Prevention
 
-ACC includes an automated file-lock and collision guard:
+ACC includes an automated file-lock and collision prevention guard:
+
+```text
+        CODER AGENT                                      DESIGN AGENT
+    (AST Transformation)                             (CSS Token Injection)
+             │                                                │
+             ▼                                                ▼
+   ┌───────────────────┐                            ┌───────────────────┐
+   │ edits lines 40-55 │                            │ edits lines 48-62 │
+   │ in src/theme.css  │                            │ in src/theme.css  │
+   └─────────┬─────────┘                            └─────────┬─────────┘
+             │                                                │
+             └───────────────────────┬────────────────────────┘
+                                     ▼
+                     ┌───────────────────────────────┐
+                     │ 🛡 WORKSPACESAFETY ENGINE     │
+                     │ [40, 55] ∩ [48, 62] = [48, 55]│
+                     │ Collision Detected on Line 48 │
+                     └───────────────┬───────────────┘
+                                     │
+                                     ▼
+                     ┌───────────────────────────────┐
+                     │  INTERACTIVE CONFLICT MODAL   │
+                     │  Side-by-Side Diff Inspector  │
+                     ├───────────────────────────────┤
+                     │ [ KEEP CODER ]   [ KEEP DESIGN]
+                     │ [ 3-WAY MERGE]   [ ORCHESTRATOR]
+                     └───────────────┬───────────────┘
+                                     │
+       ┌─────────────────────────────┼─────────────────────────────┐
+       │                             │                             │
+       ▼                             ▼                             ▼
+[ OPTION 1: KEEP CODER ]      [ OPTION 3: 3-WAY MERGE ]     [ OPTION 4: ORCHESTRATOR ]
+Applies Coder lines 40-55;    Merges non-overlapping rules; Gemini synthesizes unified
+rolls back Design lines 48-62 preserves distinct selectors  semantic hunk with both
+```
+
 - **Immutable Path Protection**: Agents are blocked from writing to critical infrastructure files:
   - `.git/`
   - `node_modules/`
@@ -286,6 +590,36 @@ ACC includes an automated file-lock and collision guard:
   - `KEEP AGENT B`: Accept second agent's changes.
   - `3-WAY MERGE`: Automatically merge non-conflicting hunks.
   - `ASK ORCHESTRATOR`: Have the Apex Orchestrator synthesize an optimal resolution.
+
+---
+
+## 🛰 Central EventBus & IPC System Architecture
+
+The core runtime uses a strongly typed, asynchronous EventBus that decouples agent worker execution from UI rendering and native OS processes:
+
+```text
+                                  ┌───────────────────────────────────┐
+                                  │      CENTRAL TYPED EVENTBUS       │
+                                  │   (Pub / Sub Message Exchange)    │
+                                  └─────────────────┬─────────────────┘
+                                                    │
+                 ┌───────────────────┬──────────────┴───────┬───────────────────┐
+                 │                   │                      │                   │
+                 ▼                   ▼                      ▼                   ▼
+        ┌─────────────────┐ ┌─────────────────┐    ┌─────────────────┐ ┌─────────────────┐
+        │  AGENT RUNTIME  │ │ WORKSPACE SAFETY│    │  UI CONTROLLERS │ │ TELEMETRY DOCK  │
+        │  • Orchestrator │ │  • File Locks   │    │  • Canvas & SVG │ │  • Oscilloscope │
+        │  • Design       │ │  • Line Spans   │    │  • Inspectors   │ │  • Hardware Mon │
+        │  • Coder        │ │  • Conflict AST │    │  • 6 Views Tabs │ │  • Sparklines   │
+        │  • Research     │ └─────────────────┘    └─────────────────┘ └─────────────────┘
+        │  • Tester       │          │                              │          │
+        └────────┬────────┘          ▼                              ▼          │
+                 │          ┌─────────────────┐    ┌─────────────────┐         │
+                 └─────────►│ LOCAL GIT ENGINE│◄───┤ ELECTRON BRIDGE ◄─────────┘
+                            │ • Diff Engine   │    │ • Native IPC FS │
+                            │ • Commit Stager │    │ • Shell / Spawns│
+                            └─────────────────┘    └─────────────────┘
+```
 
 ---
 
