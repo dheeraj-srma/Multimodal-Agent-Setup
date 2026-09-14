@@ -104,6 +104,243 @@
   font-weight: 600;
 }
 
+/* Interactive Token / Cost Popover Anchor */
+.token-popover-anchor {
+  position: relative;
+}
+
+.token-pill-interactive {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.token-pill-interactive:hover {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.2);
+}
+
+.token-pill-active {
+  background: rgba(245, 158, 11, 0.18) !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.3) !important;
+}
+
+.cost-chevron {
+  transition: transform 0.2s ease;
+}
+
+.cost-chevron.rotated {
+  transform: rotate(180deg);
+}
+
+/* Floating Cost Breakdown Popover */
+.cost-breakdown-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 380px;
+  background: rgba(10, 16, 28, 0.98);
+  backdrop-filter: blur(28px);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 10px;
+  padding: 14px;
+  z-index: 120;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 24px rgba(245, 158, 11, 0.15);
+  animation: popover-slide 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@keyframes popover-slide {
+  from { opacity: 0; transform: translate(-50%, -6px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.cbp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 8px;
+}
+
+.cbp-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cbp-title {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.06em;
+}
+
+.cbp-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim, #64748b);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.cbp-close-btn:hover {
+  color: #fff;
+}
+
+/* Summary Hero */
+.cbp-summary-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.cbp-hero-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cbp-hero-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-dim, #64748b);
+  letter-spacing: 0.05em;
+}
+
+.cbp-hero-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 700;
+  color: #f59e0b;
+}
+
+/* Model Heterogeneity Spend Table */
+.cbp-models-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cbp-section-title {
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
+  letter-spacing: 0.05em;
+}
+
+.cbp-model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cbp-model-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 5px;
+  padding: 5px 8px;
+}
+
+.cbp-row-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cbp-name-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cbp-role-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.cbp-model-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.cbp-role-tag {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.cbp-spend-digits {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+}
+
+.cbp-tokens-text {
+  color: var(--text-dim, #64748b);
+}
+
+.cbp-cost-text {
+  font-weight: 700;
+}
+
+.cbp-spend-bar-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 1.5px;
+  overflow: hidden;
+}
+
+.cbp-spend-bar-fill {
+  height: 100%;
+  border-radius: 1.5px;
+  transition: width 0.3s ease;
+}
+
+/* Retry Waste Notice */
+.cbp-retry-waste-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.cbp-retry-waste-text {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  line-height: 1.35;
+  color: var(--text-secondary, #cbd5e1);
+}
+
+.crw-bold {
+  color: #f43f5e;
+  font-weight: 700;
+}
+
+/* Hardware Status Gauges */
 .metric-pill {
   display: flex;
   align-items: center;

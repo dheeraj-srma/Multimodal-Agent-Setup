@@ -6,6 +6,7 @@ export interface DetailedAIModel extends AIModelConfig {
   architecture?: string;
   providerLabel: string;
   description: string;
+  routingRationale: string;
 }
 
 export const ROLE_COLORS: Record<AgentId, string> = {
@@ -48,6 +49,82 @@ export const calculateTokenCost = (modelId: string, promptTokens: number, comple
   return Math.round(cost * 10000) / 10000;
 };
 
+export interface ModelCostBreakdown {
+  agentId: AgentId;
+  modelId: string;
+  modelName: string;
+  providerLabel: string;
+  role: string;
+  tokens: number;
+  cost: number;
+  percentage: number;
+  isSubscriptionNative?: boolean;
+}
+
+export const getSessionCostBreakdown = (
+  assignments: Partial<Record<AgentId, string>>,
+  retryWastedTokens: number = 1400
+): {
+  items: ModelCostBreakdown[];
+  totalCost: number;
+  totalTokens: number;
+  retryWastedCost: number;
+} => {
+  const defaultAssignments: Record<AgentId, string> = {
+    orchestrator: 'gemini-1.5-pro',
+    design: 'claude-3.5-sonnet',
+    coder: 'gpt-4o',
+    research: 'perplexity-sonar',
+    tester: 'llama-3.1-70b',
+  };
+
+  const activeAssignments = { ...defaultAssignments, ...assignments };
+
+  const agentTokenEstimates: Record<AgentId, { prompt: number; completion: number }> = {
+    orchestrator: { prompt: 42000, completion: 6200 },
+    design: { prompt: 14500, completion: 3900 },
+    coder: { prompt: 24000, completion: 8100 },
+    research: { prompt: 12200, completion: 2600 },
+    tester: { prompt: 9800, completion: 2200 },
+  };
+
+  const retryCost = (retryWastedTokens / 1_000_000) * 2.5;
+
+  const items: ModelCostBreakdown[] = (Object.keys(activeAssignments) as AgentId[]).map((agentId) => {
+    const modelId = activeAssignments[agentId];
+    const model = ALL_SUPPORTED_MODELS.find((m) => m.id === modelId) || ALL_SUPPORTED_MODELS[0];
+    const toks = agentTokenEstimates[agentId];
+    const totalToks = toks.prompt + toks.completion;
+    const cost = calculateTokenCost(modelId, toks.prompt, toks.completion);
+
+    return {
+      agentId,
+      modelId,
+      modelName: model.name,
+      providerLabel: model.providerLabel,
+      role: model.role,
+      tokens: totalToks,
+      cost,
+      percentage: 0,
+      isSubscriptionNative: model.provider === 'google' || model.provider === 'local',
+    };
+  });
+
+  const totalCost = items.reduce((acc, curr) => acc + curr.cost, 0);
+  const totalTokens = items.reduce((acc, curr) => acc + curr.tokens, 0) + retryWastedTokens;
+
+  items.forEach((item) => {
+    item.percentage = totalCost > 0 ? Math.round((item.cost / totalCost) * 100) : 0;
+  });
+
+  return {
+    items,
+    totalCost: Math.round(totalCost * 100) / 100,
+    totalTokens,
+    retryWastedCost: Math.round(retryCost * 1000) / 1000,
+  };
+};
+
 export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
   {
     id: 'gemini-1.5-pro',
@@ -65,6 +142,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Multimodal MoE',
     providerLabel: 'Google Antigravity Native',
     description: 'Ultra-long context window ideal for orchestrating complex codebases without external API keys.',
+    routingRationale: '2M context window fits the entire project repository in-memory for zero-loss DAG dependency planning.',
   },
   {
     id: 'gemini-1.5-flash',
@@ -82,6 +160,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Distilled Multimodal',
     providerLabel: 'Google Antigravity Native',
     description: 'Sub-200ms latency model for immediate file verification and live parsing.',
+    routingRationale: 'Sub-200ms latency delivers near-instant documentation parsing and AST scanning.',
   },
   {
     id: 'claude-3.5-sonnet',
@@ -99,6 +178,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Dense Transformer',
     providerLabel: 'Anthropic',
     description: 'State-of-the-art visual and design reasoning with nuanced frontend token awareness.',
+    routingRationale: 'Frontier visual reasoning and spatial comprehension for precise CSS token hierarchies and UI wireframes.',
   },
   {
     id: 'claude-3.5-haiku',
@@ -116,6 +196,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Compact Dense',
     providerLabel: 'Anthropic',
     description: 'Blazing fast test runner with exceptional code safety and syntax validation.',
+    routingRationale: 'High-speed syntax consistency and deterministic validation with minimal latency.',
   },
   {
     id: 'gpt-4o',
@@ -133,6 +214,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Omni-Transformer',
     providerLabel: 'OpenAI',
     description: 'Comprehensive code generation, AST transformations, and multi-file refactoring engine.',
+    routingRationale: 'Superior instruction-following on multi-file refactoring and non-destructive AST modifications.',
   },
   {
     id: 'gpt-4o-mini',
@@ -150,6 +232,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Dense Transformer',
     providerLabel: 'OpenAI',
     description: 'Cost-effective high-throughput model for auxiliary documentation and dependency queries.',
+    routingRationale: 'Low-cost rapid lookup for dependency versioning and lightweight AST lookups.',
   },
   {
     id: 'perplexity-sonar',
@@ -167,6 +250,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Online Search Augmentation',
     providerLabel: 'Perplexity AI',
     description: 'Live real-time citation retrieval and up-to-date framework documentation cross-referencing.',
+    routingRationale: 'Integrated web search augmentation pulls live framework documentation and external benchmark citations.',
   },
   {
     id: 'llama-3.1-70b',
@@ -184,6 +268,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Open Weights Llama 3',
     providerLabel: 'Meta AI / Local',
     description: 'Excellence in rigorous deterministic evaluation, boundary testing, and adversarial fuzzing.',
+    routingRationale: 'Independent open-weights model eliminates evaluation bias when validating peer agent outputs.',
   },
   {
     id: 'llama-3.3-70b',
@@ -201,6 +286,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'Grouped-Query Attention',
     providerLabel: 'Meta AI / Local',
     description: 'Flagship open model with frontier reasoning capabilities for mission graph management.',
+    routingRationale: 'Frontier open-weights reasoning for completely local airgapped swarm task decomposition.',
   },
   {
     id: 'ollama-deepseek',
@@ -218,6 +304,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'DeepSeek Sparse MoE',
     providerLabel: 'Local Offline Engine',
     description: 'Open-weights reasoning powerhouse running fully locally with 0 telemetry or external keys.',
+    routingRationale: 'Deep chain-of-thought code synthesis running 100% locally with zero cloud API keys or telemetry.',
   },
   {
     id: 'qwen-2.5-coder',
@@ -235,6 +322,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'RoPE Attention',
     providerLabel: 'Local Offline Engine',
     description: 'Specialized coding model tailored for multi-language syntax correctness and safe diffs.',
+    routingRationale: 'Specialized code completion model tuned for TypeScript type-safety and syntax diff accuracy.',
   },
   {
     id: 'mistral-large',
@@ -252,6 +340,7 @@ export const ALL_SUPPORTED_MODELS: DetailedAIModel[] = [
     architecture: 'European Frontier MoE',
     providerLabel: 'Mistral AI',
     description: 'High-precision European AI model specialized in deterministic reasoning and clean architecture.',
+    routingRationale: 'European sovereign model offering high architectural precision and clean semantic separation.',
   },
 ];
 

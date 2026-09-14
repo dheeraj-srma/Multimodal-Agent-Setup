@@ -17,6 +17,11 @@ import {
   Pause,
   Play,
   Zap,
+  HelpCircle,
+  Repeat,
+  ArrowRight,
+  ShieldCheck,
+  Coins,
 } from 'lucide-react';
 import {
   ModelTopologyMode,
@@ -25,6 +30,7 @@ import {
   DetailedAIModel,
   ROLE_COLORS,
   ROLE_GLOWS,
+  MODEL_PRICING,
 } from '../../config/models';
 import './AgentGraph.css';
 
@@ -63,18 +69,20 @@ const NODE_HIERARCHY: Record<
     badges: string[];
     defaultTokens: string;
     defaultCpu: number;
+    sparkline: number[];
   }
 > = {
   orchestrator: {
     x: 500,
-    y: 95,
-    w: 236,
-    h: 104,
+    y: 92,
+    w: 240,
+    h: 106,
     tier: 'apex',
     roleKey: 'Orchestrator',
     badges: ['Task Decomposed: 5 subtasks', 'Coordinating Swarm'],
     defaultTokens: '48.2k',
     defaultCpu: 34,
+    sparkline: [22, 28, 35, 30, 42, 38, 45, 34],
   },
   design: {
     x: 230,
@@ -86,6 +94,7 @@ const NODE_HIERARCHY: Record<
     badges: ['UI Specs & Tokens'],
     defaultTokens: '18.4k',
     defaultCpu: 26,
+    sparkline: [15, 18, 22, 26, 32, 28, 24, 26],
   },
   coder: {
     x: 770,
@@ -97,6 +106,7 @@ const NODE_HIERARCHY: Record<
     badges: ['AST Transformations'],
     defaultTokens: '32.1k',
     defaultCpu: 58,
+    sparkline: [30, 44, 52, 68, 74, 62, 55, 58],
   },
   research: {
     x: 350,
@@ -108,6 +118,7 @@ const NODE_HIERARCHY: Record<
     badges: ['12 sources cited'],
     defaultTokens: '14.8k',
     defaultCpu: 19,
+    sparkline: [10, 14, 18, 25, 20, 18, 22, 19],
   },
   tester: {
     x: 650,
@@ -119,26 +130,29 @@ const NODE_HIERARCHY: Record<
     badges: ['WCAG AAA & Regressions'],
     defaultTokens: '12.0k',
     defaultCpu: 22,
+    sparkline: [12, 16, 20, 28, 32, 26, 24, 22],
   },
 };
 
 // Continuous connection paths
 const PIPELINE_PATHS = {
-  orchToDesign: 'M 500,147 C 410,180 290,200 230,231',
-  orchToCoder: 'M 500,147 C 590,180 710,200 770,231',
+  orchToDesign: 'M 500,145 C 410,180 290,200 230,231',
+  orchToCoder: 'M 500,145 C 590,180 710,200 770,231',
+  designToCoderLoop: 'M 332,254 C 440,208 560,208 668,254', // Bi-directional negotiation arc (upper)
+  coderToDesignLoop: 'M 668,296 C 560,342 440,342 332,296', // Bi-directional negotiation arc (lower)
   designToResearch: 'M 230,319 C 230,395 285,435 350,449',
   coderToTester: 'M 770,319 C 770,395 715,435 650,449',
-  researchToOrch: 'M 350,429 C 410,340 460,220 480,147',
-  testerToOrch: 'M 650,429 C 590,340 540,220 520,147',
+  researchToOrch: 'M 350,429 C 410,340 460,220 480,145',
+  testerToOrch: 'M 650,429 C 590,340 540,220 520,145',
 };
 
 // Data transfer badge markers
 const DATA_BADGES = [
-  { text: 'Directive Dispatch • 12 KB/s', x: 335, y: 180, color: '#38bdf8' },
-  { text: 'Feature Implementation • 28 KB/s', x: 665, y: 180, color: '#34d399' },
-  { text: 'Design Specs • 8 KB/s', x: 260, y: 380, color: '#c084fc' },
-  { text: 'Verification Suite • 14 KB/s', x: 740, y: 380, color: '#f43f5e' },
-  { text: 'Convergence Loop • 6 KB/s', x: 500, y: 320, color: '#38bdf8' },
+  { text: 'Directive Dispatch • 12 KB/s', x: 340, y: 180, color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)' },
+  { text: 'Feature Implementation • 28 KB/s', x: 660, y: 180, color: '#34d399', bg: 'rgba(52, 211, 153, 0.12)' },
+  { text: 'Design Specs • 8 KB/s', x: 260, y: 382, color: '#c084fc', bg: 'rgba(192, 132, 252, 0.12)' },
+  { text: 'Verification Suite • 14 KB/s', x: 740, y: 382, color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.12)' },
+  { text: 'Convergence Feedback • 6 KB/s', x: 500, y: 442, color: '#fb923c', bg: 'rgba(251, 146, 60, 0.12)' },
 ];
 
 export const AgentGraph: React.FC<AgentGraphProps> = ({
@@ -156,7 +170,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
 }) => {
   const [dynamicPackets, setDynamicPackets] = useState<DynamicPacket[]>([]);
   const [hoveredAgentId, setHoveredAgentId] = useState<AgentId | null>(null);
-  const [modelDropdownAgentId, setModelDropdownAgentId] = useState<AgentId | null>(null);
+  const [activeRationaleAgentId, setActiveRationaleAgentId] = useState<AgentId | null>(null);
   const processedEventIds = useRef<Set<string>>(new Set());
 
   // Listen for real message/task events to trigger transient packets
@@ -198,6 +212,8 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
     const assignedId = customAssignments[agentId] || TOPOLOGY_PRESETS[topologyMode]?.assignments[agentId];
     return ALL_SUPPORTED_MODELS.find((m) => m.id === assignedId) || ALL_SUPPORTED_MODELS[0];
   };
+
+  const activeRationaleModel = activeRationaleAgentId ? getModelForAgent(activeRationaleAgentId) : null;
 
   return (
     <div className="agent-graph-wrapper">
@@ -265,6 +281,45 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
         </div>
       </div>
 
+      {/* Swarm Pipeline Legend Bar */}
+      <div className="graph-pipeline-legend">
+        <div className="legend-group">
+          <span className="legend-title">PIPELINE LEGEND:</span>
+          <div className="legend-item" title="Orchestrator Role">
+            <span className="legend-dot" style={{ background: ROLE_COLORS.orchestrator }}></span>
+            <span>Orchestrator</span>
+          </div>
+          <div className="legend-item" title="Design & Frontend Role">
+            <span className="legend-dot" style={{ background: ROLE_COLORS.design }}></span>
+            <span>Design</span>
+          </div>
+          <div className="legend-item" title="Backend & Coding Role">
+            <span className="legend-dot" style={{ background: ROLE_COLORS.coder }}></span>
+            <span>Coder</span>
+          </div>
+          <div className="legend-item" title="Research & Benchmark Role">
+            <span className="legend-dot" style={{ background: ROLE_COLORS.research }}></span>
+            <span>Research</span>
+          </div>
+          <div className="legend-item" title="QA, Testing & Regressions Role">
+            <span className="legend-dot" style={{ background: ROLE_COLORS.tester }}></span>
+            <span>Tester</span>
+          </div>
+        </div>
+
+        <div className="legend-group legend-telemetry-key">
+          <div className="legend-item">
+            <span className="legend-flow-icon">●●●</span>
+            <span>Velocity = KB/s Throughput</span>
+          </div>
+          <div className="legend-divider">|</div>
+          <div className="legend-item">
+            <Repeat size={11} color="#c084fc" />
+            <span style={{ color: '#c084fc' }}>⟲ Bi-Directional Negotiation</span>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Graph Canvas */}
       <div className="multi-agent-graph-canvas">
         <svg className="mag-svg" viewBox="0 0 1000 570" preserveAspectRatio="xMidYMid meet">
@@ -282,51 +337,150 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               </feMerge>
             </filter>
 
+            {/* Directional Path Gradients: Inherit source to target role color */}
+            <linearGradient id="gradOrchDesign" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#c084fc" stopOpacity="0.8" />
+            </linearGradient>
+
+            <linearGradient id="gradOrchCoder" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#34d399" stopOpacity="0.8" />
+            </linearGradient>
+
+            <linearGradient id="gradDesignCoder" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#c084fc" stopOpacity="0.85" />
+              <stop offset="50%" stopColor="#818cf8" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#34d399" stopOpacity="0.85" />
+            </linearGradient>
+
+            <linearGradient id="gradCoderDesign" x1="100%" y1="0%" x2="0%" y2="0%">
+              <stop offset="0%" stopColor="#34d399" stopOpacity="0.85" />
+              <stop offset="50%" stopColor="#818cf8" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#c084fc" stopOpacity="0.85" />
+            </linearGradient>
+
+            <linearGradient id="gradDesignResearch" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#c084fc" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#fb923c" stopOpacity="0.8" />
+            </linearGradient>
+
+            <linearGradient id="gradCoderTester" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#34d399" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.8" />
+            </linearGradient>
+
+            <linearGradient id="gradResearchOrch" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#fb923c" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.75" />
+            </linearGradient>
+
+            <linearGradient id="gradTesterOrch" x1="100%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.75" />
+              <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.75" />
+            </linearGradient>
+
             {/* Diagonal Hatch Pattern for Blocked / Waiting State */}
             <pattern id="blockedHatch" width="10" height="10" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
               <line x1="0" y1="0" x2="0" y2="10" stroke="rgba(245, 158, 11, 0.25)" strokeWidth="3" />
             </pattern>
           </defs>
 
-          {/* 1. Curved Spline Channels with Directional Gradient Stems */}
+          {/* 1. Curved Spline Channels with Directional Role Gradients */}
           <g className="channels-layer">
-            <path id="pathOrchDesign" d={PIPELINE_PATHS.orchToDesign} className="spline-channel sc-cyan" />
-            <path id="pathOrchCoder" d={PIPELINE_PATHS.orchToCoder} className="spline-channel sc-emerald" />
-            <path id="pathDesignResearch" d={PIPELINE_PATHS.designToResearch} className="spline-channel sc-violet" />
-            <path id="pathCoderTester" d={PIPELINE_PATHS.coderToTester} className="spline-channel sc-rose" />
-            <path id="pathResearchOrch" d={PIPELINE_PATHS.researchToOrch} className="spline-channel sc-amber" />
-            <path id="pathTesterOrch" d={PIPELINE_PATHS.testerToOrch} className="spline-channel sc-rose" />
+            <path id="pathOrchDesign" d={PIPELINE_PATHS.orchToDesign} stroke="url(#gradOrchDesign)" className="spline-channel sc-dynamic" />
+            <path id="pathOrchCoder" d={PIPELINE_PATHS.orchToCoder} stroke="url(#gradOrchCoder)" className="spline-channel sc-dynamic" />
+            
+            {/* Bi-Directional Negotiation Loop between Design and Coder */}
+            <path id="pathDesignCoderLoop" d={PIPELINE_PATHS.designToCoderLoop} stroke="url(#gradDesignCoder)" className="spline-channel sc-loop-upper" />
+            <path id="pathCoderDesignLoop" d={PIPELINE_PATHS.coderToDesignLoop} stroke="url(#gradCoderDesign)" className="spline-channel sc-loop-lower" />
+
+            <path id="pathDesignResearch" d={PIPELINE_PATHS.designToResearch} stroke="url(#gradDesignResearch)" className="spline-channel sc-dynamic" />
+            <path id="pathCoderTester" d={PIPELINE_PATHS.coderToTester} stroke="url(#gradCoderTester)" className="spline-channel sc-dynamic" />
+            <path id="pathResearchOrch" d={PIPELINE_PATHS.researchToOrch} stroke="url(#gradResearchOrch)" className="spline-channel sc-dynamic" />
+            <path id="pathTesterOrch" d={PIPELINE_PATHS.testerToOrch} stroke="url(#gradTesterOrch)" className="spline-channel sc-dynamic" />
           </g>
 
-          {/* 2. Continuous Flowing Particles Along Splines */}
+          {/* 2. Throughput-Proportional Animated Flowing Dots */}
           <g className="continuous-particles-layer">
-            {/* Orch -> Design particle */}
-            <circle r="3.5" fill="#38bdf8" filter="url(#packetGlow)">
-              <animateMotion dur="2.4s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} />
+            {/* Orch -> Coder (28 KB/s High Throughput: 4 Fast Emerald Particles, dur=1.0s, staggered) */}
+            <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
+              <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0s" />
             </circle>
-            {/* Orch -> Coder particle */}
-            <circle r="4" fill="#34d399" filter="url(#packetGlow)">
-              <animateMotion dur="2.1s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} />
+            <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
+              <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.25s" />
             </circle>
-            {/* Design -> Research particle */}
-            <circle r="3" fill="#c084fc" filter="url(#packetGlow)">
-              <animateMotion dur="2.6s" repeatCount="indefinite" path={PIPELINE_PATHS.designToResearch} />
+            <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
+              <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.5s" />
             </circle>
-            {/* Coder -> Tester particle */}
+            <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
+              <animateMotion dur="1.0s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToCoder} begin="0.75s" />
+            </circle>
+
+            {/* Coder -> Tester (14 KB/s Medium-High: 3 Rose Particles, dur=1.4s, staggered) */}
+            <circle r="3.8" fill="#f43f5e" filter="url(#packetGlow)">
+              <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0s" />
+            </circle>
             <circle r="3.5" fill="#f43f5e" filter="url(#packetGlow)">
-              <animateMotion dur="2.2s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} />
+              <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0.46s" />
             </circle>
-            {/* Research -> Orch feedback */}
-            <circle r="3" fill="#fb923c" filter="url(#packetGlow)">
-              <animateMotion dur="3.0s" repeatCount="indefinite" path={PIPELINE_PATHS.researchToOrch} />
+            <circle r="3.8" fill="#f43f5e" filter="url(#packetGlow)">
+              <animateMotion dur="1.4s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToTester} begin="0.92s" />
             </circle>
-            {/* Tester -> Orch feedback */}
-            <circle r="3" fill="#f43f5e" filter="url(#packetGlow)">
-              <animateMotion dur="2.7s" repeatCount="indefinite" path={PIPELINE_PATHS.testerToOrch} />
+
+            {/* Orch -> Design (12 KB/s Medium: 2 Cyan Particles, dur=1.7s, staggered) */}
+            <circle r="3.8" fill="#38bdf8" filter="url(#packetGlow)">
+              <animateMotion dur="1.7s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} begin="0s" />
+            </circle>
+            <circle r="3.8" fill="#38bdf8" filter="url(#packetGlow)">
+              <animateMotion dur="1.7s" repeatCount="indefinite" path={PIPELINE_PATHS.orchToDesign} begin="0.85s" />
+            </circle>
+
+            {/* Bi-Directional Negotiation Particles: Design <-> Coder Counter-Flow */}
+            {/* Design -> Coder: Violet Flow along upper arc */}
+            <circle r="3.8" fill="#c084fc" filter="url(#packetGlow)">
+              <animateMotion dur="1.5s" repeatCount="indefinite" path={PIPELINE_PATHS.designToCoderLoop} begin="0s" />
+            </circle>
+            <circle r="3.4" fill="#c084fc" filter="url(#packetGlow)">
+              <animateMotion dur="1.5s" repeatCount="indefinite" path={PIPELINE_PATHS.designToCoderLoop} begin="0.75s" />
+            </circle>
+
+            {/* Coder -> Design: Emerald Flow along lower arc */}
+            <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
+              <animateMotion dur="1.5s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToDesignLoop} begin="0s" />
+            </circle>
+            <circle r="3.4" fill="#34d399" filter="url(#packetGlow)">
+              <animateMotion dur="1.5s" repeatCount="indefinite" path={PIPELINE_PATHS.coderToDesignLoop} begin="0.75s" />
+            </circle>
+
+            {/* Design -> Research (8 KB/s: 2 Violet Particles, dur=2.4s) */}
+            <circle r="3.2" fill="#c084fc" filter="url(#packetGlow)">
+              <animateMotion dur="2.4s" repeatCount="indefinite" path={PIPELINE_PATHS.designToResearch} begin="0s" />
+            </circle>
+            <circle r="3.2" fill="#c084fc" filter="url(#packetGlow)">
+              <animateMotion dur="2.4s" repeatCount="indefinite" path={PIPELINE_PATHS.designToResearch} begin="1.2s" />
+            </circle>
+
+            {/* Research -> Orch Feedback (6 KB/s: 1 Amber Particle, dur=3.2s) */}
+            <circle r="3.2" fill="#fb923c" filter="url(#packetGlow)">
+              <animateMotion dur="3.2s" repeatCount="indefinite" path={PIPELINE_PATHS.researchToOrch} begin="0s" />
+            </circle>
+
+            {/* Tester -> Orch Feedback (6 KB/s: 1 Rose Particle, dur=2.9s) */}
+            <circle r="3.2" fill="#f43f5e" filter="url(#packetGlow)">
+              <animateMotion dur="2.9s" repeatCount="indefinite" path={PIPELINE_PATHS.testerToOrch} begin="0s" />
             </circle>
           </g>
 
-          {/* 3. Floating Data Transfer Volume Pills along Curves */}
+          {/* 3. Central Bi-Directional Negotiation Loop Badge */}
+          <g transform="translate(500, 275)" className="negotiation-loop-badge-group">
+            <rect x="-115" y="-12" width="230" height="24" rx="12" className="negotiation-badge-pill" />
+            <text x="0" y="4" className="negotiation-badge-text">
+              ⟲ Spec Negotiation • 3 Cycles
+            </text>
+          </g>
+
+          {/* 4. Floating Data Transfer Volume Pills along Curves */}
           <g className="data-badges-layer">
             {DATA_BADGES.map((b, idx) => (
               <g key={idx} transform={`translate(${b.x}, ${b.y})`}>
@@ -338,7 +492,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
             ))}
           </g>
 
-          {/* 4. Multi-Model Nodes with Tiered Hierarchy */}
+          {/* 5. Multi-Model Nodes with Tiered Hierarchy */}
           <g className="model-nodes-layer">
             {(Object.keys(NODE_HIERARCHY) as AgentId[]).map((agentId) => {
               const node = NODE_HIERARCHY[agentId];
@@ -356,6 +510,7 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               const isFailed = status.state === 'FAILED';
               const isWorking = status.state === 'WORKING' || status.state === 'STARTING';
               const isApex = node.tier === 'apex';
+              const hasRetries = (status.retryCount || 0) > 0;
 
               const renderIcon = () => {
                 if (model.provider === 'google') return <Sparkles size={isApex ? 19 : 16} color={roleColor} />;
@@ -443,12 +598,12 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                     </g>
                   )}
 
-                  {/* Error & Retry Badge */}
-                  {isFailed && (
-                    <g transform={`translate(-65, ${-halfH - 12})`}>
-                      <rect x="0" y="0" width="130" height="20" rx="6" className="failed-status-pill" />
-                      <text x="65" y="14" className="failed-status-text">
-                        ⚠️ FAILED • RETRY #1
+                  {/* Retry & Cost Consequence Badge */}
+                  {(isFailed || hasRetries) && (
+                    <g transform={`translate(-80, ${-halfH - 12})`}>
+                      <rect x="0" y="0" width="160" height="20" rx="6" className="failed-status-pill" />
+                      <text x="80" y="14" className="failed-status-text">
+                        {isFailed ? '⚠️ FAILED • RETRY #1' : `⚠️ RETRIED (${status.retryCount}x • +$0.004)`}
                       </text>
                     </g>
                   )}
@@ -466,10 +621,24 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                     <g transform={`translate(${isApex ? 8 : 7}, ${isApex ? 8 : 7})`}>{renderIcon()}</g>
                   </g>
 
-                  {/* Model Title (Clickable for mid-run override) */}
+                  {/* Model Title & Routing Rationale Button */}
                   <text x={-halfW + (isApex ? 60 : 54)} y={-halfH + (isApex ? 26 : 22)} className="node-model-title">
                     {model.name}
                   </text>
+
+                  {/* Model Routing Rationale Badge Button [?] */}
+                  <g
+                    transform={`translate(${halfW - 24}, ${-halfH + 12})`}
+                    className="rationale-trigger-group"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveRationaleAgentId(activeRationaleAgentId === agentId ? null : agentId);
+                    }}
+                  >
+                    <title>{`View Routing Rationale for ${model.name}`}</title>
+                    <circle cx="8" cy="8" r="8" className="rationale-trigger-circle" />
+                    <text x="8" y="11" className="rationale-trigger-text">?</text>
+                  </g>
 
                   {/* Role Subtitle */}
                   <text
@@ -515,9 +684,27 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
                     strokeLinecap="round"
                   />
 
-                  {/* Per-Node Mini Resource & Token Usage Tag */}
-                  <g transform={`translate(${-halfW + 16}, ${halfH - 20})`}>
-                    <text x="0" y="10" className="node-resource-text">
+                  {/* Mini Token/Burn Sparkline Bar (Spike Visualizer) */}
+                  <g transform={`translate(${-halfW + 16}, ${halfH - 22})`}>
+                    <g className="mini-node-sparkline">
+                      {node.sparkline.map((val, sIdx) => {
+                        const barH = Math.max(3, (val / 80) * 12);
+                        const isSpike = val > 50;
+                        return (
+                          <rect
+                            key={sIdx}
+                            x={sIdx * 5}
+                            y={12 - barH}
+                            width="3"
+                            height={barH}
+                            rx="1"
+                            fill={isSpike ? '#f59e0b' : roleColor}
+                            opacity={0.75 + (sIdx / node.sparkline.length) * 0.25}
+                          />
+                        );
+                      })}
+                    </g>
+                    <text x="46" y="10" className="node-resource-text">
                       CPU {status.cpuPercent || node.defaultCpu}% • {status.promptTokens ? `${Math.round((status.promptTokens + (status.completionTokens || 0)) / 1000)}k` : node.defaultTokens} tok
                     </text>
                   </g>
@@ -536,6 +723,70 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
             })}
           </g>
         </svg>
+
+        {/* Floating Model Routing Rationale Tooltip Modal / Popover */}
+        {activeRationaleAgentId && activeRationaleModel && (
+          <div
+            className="model-rationale-popover"
+            style={{
+              left: `${NODE_HIERARCHY[activeRationaleAgentId].x > 500 ? NODE_HIERARCHY[activeRationaleAgentId].x - 260 : NODE_HIERARCHY[activeRationaleAgentId].x + 40}px`,
+              top: `${NODE_HIERARCHY[activeRationaleAgentId].y - 20}px`,
+            }}
+          >
+            <div className="mrp-header">
+              <div className="mrp-title-group">
+                <HelpCircle size={13} color={ROLE_COLORS[activeRationaleAgentId]} />
+                <span className="mrp-title">ROUTING RATIONALE</span>
+              </div>
+              <button
+                className="mrp-close-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveRationaleAgentId(null);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="mrp-body">
+              <div className="mrp-model-line">
+                <span className="mrp-model-name" style={{ color: ROLE_COLORS[activeRationaleAgentId] }}>
+                  {activeRationaleModel.name}
+                </span>
+                <span className="mrp-provider-chip">{activeRationaleModel.providerLabel}</span>
+              </div>
+
+              <div className="mrp-reason-box">
+                <span className="mrp-reason-label">WHY THIS MODEL FOR THIS ROLE:</span>
+                <p className="mrp-reason-text">{activeRationaleModel.routingRationale}</p>
+              </div>
+
+              <div className="mrp-stats-grid">
+                <div className="mrp-stat-item">
+                  <span className="mrp-stat-label">Architecture</span>
+                  <span className="mrp-stat-val">{activeRationaleModel.architecture || 'Frontier Transformer'}</span>
+                </div>
+                <div className="mrp-stat-item">
+                  <span className="mrp-stat-label">Latency</span>
+                  <span className="mrp-stat-val">{activeRationaleModel.latency || '~400ms'}</span>
+                </div>
+                <div className="mrp-stat-item">
+                  <span className="mrp-stat-label">Context Window</span>
+                  <span className="mrp-stat-val">{activeRationaleModel.contextWindow || '128k tokens'}</span>
+                </div>
+                <div className="mrp-stat-item">
+                  <span className="mrp-stat-label">Pricing / Token Rate</span>
+                  <span className="mrp-stat-val" style={{ color: '#f59e0b' }}>
+                    {MODEL_PRICING[activeRationaleModel.id]?.promptPer1M === 0
+                      ? 'Antigravity Native ($0.00)'
+                      : `$${MODEL_PRICING[activeRationaleModel.id]?.promptPer1M || 1}/1M Prompt`}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

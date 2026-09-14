@@ -284,6 +284,7 @@ export const App: React.FC = () => {
           activeAgentsCount={activeAgentsCount}
           sessionTokens={sessionTokens}
           sessionCost={sessionCost}
+          customAssignments={customAssignments}
           onOpenGitModal={() => setShowGitModal(true)}
           onOpenDiffModal={() => setShowDiffModal(true)}
           onOpenReportModal={() => setShowReportModal(true)}

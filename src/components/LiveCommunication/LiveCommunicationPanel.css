@@ -92,6 +92,25 @@
   border-color: rgba(255, 255, 255, 0.12);
 }
 
+.msg-failure-alert {
+  background: rgba(244, 63, 94, 0.08) !important;
+  border-color: rgba(244, 63, 94, 0.25) !important;
+}
+
+.retry-spend-banner {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(244, 63, 94, 0.15);
+  border-radius: 4px;
+  padding: 3px 6px;
+  margin-top: 3px;
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  font-weight: 600;
+  color: #f87171;
+}
+
 .msg-meta-row {
   display: flex;
   align-items: center;
@@ -103,6 +122,16 @@
   font-weight: 700;
   font-family: var(--font-mono, monospace);
   letter-spacing: 0.02em;
+}
+
+.clickable-sender {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.clickable-sender:hover {
+  text-decoration: underline;
+  opacity: 0.85;
 }
 
 .msg-time {
@@ -117,7 +146,7 @@
   line-height: 1.4;
 }
 
-/* Raw Payload Accordion */
+/* Raw Payload Accordion - Expands smoothly inline without moving the viewport */
 .raw-payload-toggle {
   display: flex;
   align-items: center;
@@ -153,6 +182,12 @@
   word-break: break-all;
   max-height: 120px;
   overflow-y: auto;
+  animation: inline-expand 0.2s ease;
+}
+
+@keyframes inline-expand {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Message Input Area */
@@ -163,32 +198,36 @@
   margin-top: 4px;
 }
 
-.input-target-row {
+/* Quick Unicast Chips Selector */
+.unicast-chips-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 
-.input-label {
-  font-size: 10px;
-  font-family: var(--font-mono, monospace);
-  color: var(--text-muted, #94a3b8);
-}
-
-.target-agent-select {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #38bdf8;
-  font-size: 10px;
-  font-family: var(--font-mono, monospace);
-  padding: 2px 6px;
+.unicast-chip {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  outline: none;
+  padding: 2px 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
 }
 
-.target-agent-select option {
-  background: #0b111c;
-  color: #fff;
+.unicast-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.unicast-chip.chip-active {
+  background: rgba(255, 255, 255, 0.1) !important;
+  font-weight: 700;
+  box-shadow: 0 0 8px currentColor;
 }
 
 .input-form-row {
@@ -308,6 +347,23 @@
   align-items: center;
   gap: 8px;
   font-size: 11px;
+}
+
+.checklist-item-retried {
+  align-items: flex-start;
+}
+
+.cl-retried-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cl-retry-note {
+  font-family: var(--font-mono, monospace);
+  font-size: 8.5px;
+  color: #f87171;
+  font-weight: 600;
 }
 
 /* Status Icons */

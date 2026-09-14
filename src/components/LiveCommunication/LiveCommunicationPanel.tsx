@@ -16,6 +16,10 @@ import {
   Lock,
   AlertCircle,
   Coins,
+  AlertTriangle,
+  RotateCcw,
+  MessageSquare,
+  Zap,
 } from 'lucide-react';
 import { AgentMessagePayload, Mission, AgentTask, AgentId } from '../../types';
 import { ROLE_COLORS } from '../../config/models';
@@ -38,6 +42,15 @@ interface ParsedMessage {
   isObject: boolean;
 }
 
+const AGENT_UNICAST_OPTIONS: { id: string; label: string; name: string }[] = [
+  { id: 'broadcast', label: 'Swarm (All)', name: 'Broadcast' },
+  { id: 'orchestrator', label: '@orch', name: 'Gemini' },
+  { id: 'design', label: '@design', name: 'Claude' },
+  { id: 'coder', label: '@coder', name: 'GPT-4o' },
+  { id: 'research', label: '@research', name: 'Sonar' },
+  { id: 'tester', label: '@tester', name: 'Llama' },
+];
+
 export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
   messages,
   mission,
@@ -45,8 +58,8 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
   onPauseAll,
   onStopAll,
   onNewTask,
-  sessionTokens = 42800,
-  sessionCost = 0.08,
+  sessionTokens = 125500,
+  sessionCost = 0.18,
 }) => {
   const [inputText, setInputText] = useState('');
   const [targetAgent, setTargetAgent] = useState<string>('broadcast');
@@ -66,6 +79,10 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
     if (!inputText.trim()) return;
     onSendMessage(targetAgent, inputText.trim());
     setInputText('');
+  };
+
+  const selectUnicastTarget = (agentId: string) => {
+    setTargetAgent(agentId);
   };
 
   const parseMessagePayload = (msg: AgentMessagePayload): ParsedMessage => {
@@ -127,18 +144,23 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
             </span>
             <span className="comm-count-badge">
               <Sparkles size={11} />
-              <span>{messages.length || 6}</span>
+              <span>{messages.length || 7}</span>
             </span>
           </div>
         </div>
 
         <div className="comm-message-list">
           {messages.length === 0 ? (
-            // Default sample feed with clean non-truncated summaries and expandable payloads
+            // Default feed with clean inline expandable payloads, realistic failure/retry accounting, and 1-click unicast targets
             <>
               <div className="comm-msg-item">
                 <div className="msg-meta-row">
-                  <span className="msg-sender" style={{ color: ROLE_COLORS.orchestrator }}>
+                  <span
+                    className="msg-sender clickable-sender"
+                    style={{ color: ROLE_COLORS.orchestrator }}
+                    onClick={() => selectUnicastTarget('orchestrator')}
+                    title="Click to unicast whisper to Orchestrator"
+                  >
                     GEMINI (Orchestrator) → ALL
                   </span>
                   <span className="msg-time">10:24</span>
@@ -150,7 +172,12 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
 
               <div className="comm-msg-item">
                 <div className="msg-meta-row">
-                  <span className="msg-sender" style={{ color: ROLE_COLORS.design }}>
+                  <span
+                    className="msg-sender clickable-sender"
+                    style={{ color: ROLE_COLORS.design }}
+                    onClick={() => selectUnicastTarget('design')}
+                    title="Click to unicast whisper to Claude (Design)"
+                  >
                     CLAUDE (Design) → GEMINI
                   </span>
                   <span className="msg-time">10:25</span>
@@ -158,6 +185,7 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
                 <div className="msg-body-text">
                   Completed UI analysis. Exported modern typography and color token specifications.
                 </div>
+                {/* Inline Payload Accordion */}
                 <button
                   className="raw-payload-toggle"
                   onClick={() => toggleExpand('sample-1')}
@@ -182,7 +210,12 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
 
               <div className="comm-msg-item">
                 <div className="msg-meta-row">
-                  <span className="msg-sender" style={{ color: ROLE_COLORS.coder }}>
+                  <span
+                    className="msg-sender clickable-sender"
+                    style={{ color: ROLE_COLORS.coder }}
+                    onClick={() => selectUnicastTarget('coder')}
+                    title="Click to unicast whisper to GPT-4o (Coder)"
+                  >
                     GPT-4o (Coder) → CLAUDE
                   </span>
                   <span className="msg-time">10:25</span>
@@ -194,7 +227,12 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
 
               <div className="comm-msg-item">
                 <div className="msg-meta-row">
-                  <span className="msg-sender" style={{ color: ROLE_COLORS.research }}>
+                  <span
+                    className="msg-sender clickable-sender"
+                    style={{ color: ROLE_COLORS.research }}
+                    onClick={() => selectUnicastTarget('research')}
+                    title="Click to unicast whisper to Perplexity (Research)"
+                  >
                     PERPLEXITY (Research) → ALL
                   </span>
                   <span className="msg-time">10:26</span>
@@ -204,27 +242,42 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
                 </div>
               </div>
 
-              <div className="comm-msg-item">
+              {/* Failure & Retry Event in Live Feed with Financial Consequence */}
+              <div className="comm-msg-item msg-failure-alert">
                 <div className="msg-meta-row">
-                  <span className="msg-sender" style={{ color: ROLE_COLORS.tester }}>
-                    LLAMA 3.1 (Tester) → GPT-4o
+                  <span
+                    className="msg-sender clickable-sender"
+                    style={{ color: ROLE_COLORS.tester }}
+                    onClick={() => selectUnicastTarget('tester')}
+                    title="Click to unicast whisper to Llama (Tester)"
+                  >
+                    LLAMA 3.1 (Tester) ⚠️ ERROR
                   </span>
                   <span className="msg-time">10:27</span>
                 </div>
-                <div className="msg-body-text">
-                  Running automated WCAG AAA accessibility audit and syntax validation pass.
+                <div className="msg-body-text" style={{ color: '#fca5a5' }}>
+                  Contrast check failed on secondary badge contrast ratio (3.8:1 &lt; 4.5:1 WCAG AAA).
+                </div>
+                <div className="retry-spend-banner">
+                  <RotateCcw size={10} color="#f43f5e" />
+                  <span>Auto-retrying pass (Attempt 2/3) • Spend impact: +1.4k tok ($0.004)</span>
                 </div>
               </div>
 
               <div className="comm-msg-item">
                 <div className="msg-meta-row">
-                  <span className="msg-sender" style={{ color: ROLE_COLORS.orchestrator }}>
+                  <span
+                    className="msg-sender clickable-sender"
+                    style={{ color: ROLE_COLORS.orchestrator }}
+                    onClick={() => selectUnicastTarget('orchestrator')}
+                    title="Click to unicast whisper to Orchestrator"
+                  >
                     GEMINI (Orchestrator) → ALL
                   </span>
-                  <span className="msg-time">10:27</span>
+                  <span className="msg-time">10:28</span>
                 </div>
                 <div className="msg-body-text">
-                  All prerequisite stages converged. Preparing final synthesized markdown report.
+                  All prerequisite stages converged. Synthesizing final validated markdown report.
                 </div>
               </div>
             </>
@@ -236,7 +289,12 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
               return (
                 <div key={msg.id} className="comm-msg-item">
                   <div className="msg-meta-row">
-                    <span className="msg-sender" style={{ color: getAgentColor(msg.from) }}>
+                    <span
+                      className="msg-sender clickable-sender"
+                      style={{ color: getAgentColor(msg.from) }}
+                      onClick={() => selectUnicastTarget(msg.from)}
+                      title={`Click to whisper directly to ${msg.from}`}
+                    >
                       {msg.from.toUpperCase()} → {msg.to.toUpperCase()}
                     </span>
                     <span className="msg-time">
@@ -261,28 +319,39 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
           )}
         </div>
 
-        {/* Message Input Box */}
+        {/* Message Input Box with 1-Click Unicast Quick Chips */}
         <div className="message-input-container">
-          <div className="input-target-row">
-            <span className="input-label">Directive To:</span>
-            <select
-              value={targetAgent}
-              onChange={(e) => setTargetAgent(e.target.value)}
-              className="target-agent-select"
-            >
-              <option value="broadcast">All Agents (Broadcast)</option>
-              <option value="orchestrator">Orchestrator (Gemini)</option>
-              <option value="design">Design Agent (Claude)</option>
-              <option value="coder">Coder Agent (GPT-4o)</option>
-              <option value="research">Research Agent (Perplexity)</option>
-              <option value="tester">Test Agent (Llama)</option>
-            </select>
+          {/* Quick Unicast Chips */}
+          <div className="unicast-chips-row">
+            {AGENT_UNICAST_OPTIONS.map((opt) => {
+              const isSelected = targetAgent === opt.id;
+              const chipColor = opt.id === 'broadcast' ? '#38bdf8' : ROLE_COLORS[opt.id as AgentId] || '#38bdf8';
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`unicast-chip ${isSelected ? 'chip-active' : ''}`}
+                  onClick={() => setTargetAgent(opt.id)}
+                  style={{
+                    borderColor: isSelected ? chipColor : 'rgba(255, 255, 255, 0.08)',
+                    color: isSelected ? chipColor : 'var(--text-secondary, #cbd5e1)',
+                  }}
+                  title={opt.id === 'broadcast' ? 'Broadcast to entire swarm' : `Whisper only to ${opt.name}`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
 
           <form onSubmit={handleSend} className="input-form-row">
             <input
               type="text"
-              placeholder="Send instruction to swarm..."
+              placeholder={
+                targetAgent === 'broadcast'
+                  ? 'Broadcast directive to swarm...'
+                  : `Direct whisper to @${targetAgent}...`
+              }
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="chat-input-field"
@@ -294,7 +363,7 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
         </div>
       </div>
 
-      {/* Section 2: Current Task Checklist with Distinct Partial Progress States */}
+      {/* Section 2: Current Task Checklist with Distinct Partial Progress & Retry States */}
       <div className="task-section">
         <div className="current-task-title-row">
           <span className="ct-label">Current Task</span>
@@ -312,7 +381,7 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
           <div className="ct-progress-fill" style={{ width: `${progressPct}%` }}></div>
         </div>
 
-        {/* Dynamic Checklist with Distinct States */}
+        {/* Dynamic Checklist with Distinct States and Retry Overhead */}
         <div className="task-checklist">
           {tasks.length > 0 ? (
             tasks.map((task) => {
@@ -350,7 +419,7 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
               );
             })
           ) : (
-            // Rich multi-state sample checklist if no mission active
+            // Rich multi-state sample checklist with retry accounting
             <>
               <div className="checklist-item">
                 <CheckCircle2 size={13} className="cl-icon-done" />
@@ -364,9 +433,12 @@ export const LiveCommunicationPanel: React.FC<LiveCommunicationPanelProps> = ({
                 <Loader2 size={13} className="cl-icon-running spin-icon" />
                 <span className="cl-text cl-text-running">Implement responsive UI components</span>
               </div>
-              <div className="checklist-item">
-                <Lock size={12} className="cl-icon-blocked" />
-                <span className="cl-text cl-text-blocked">Verify accessibility & regressions</span>
+              <div className="checklist-item checklist-item-retried">
+                <RotateCcw size={12} className="cl-icon-failed" />
+                <div className="cl-retried-col">
+                  <span className="cl-text cl-text-failed">Verify accessibility & regressions</span>
+                  <span className="cl-retry-note">Retry #1 pass: +1.4k tok ($0.004 spent)</span>
+                </div>
               </div>
               <div className="checklist-item">
                 <Clock size={12} className="cl-icon-queued" />
