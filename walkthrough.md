@@ -72,10 +72,38 @@ Previously, clicking sidebar items like **Files**, **Git**, or **Settings** trig
 
 ---
 
+## 5. Enhanced High-Fidelity Text Diagrams & Visual Schematics
+
+The project's [README.md](file:///d:/Projects/Multi%20Agent%20Setup/README.md) has been upgraded with 10 comprehensive, high-fidelity ASCII/Unicode visual schematics:
+
+1. **Mission Control HUD & Topology Canvas** (Section 1):
+   - Real-time mission stats bar, timer, speedup multiplier, spend tracking, left navigation deck, central topology canvas with Bezier splines and throughput badges (`12 KB/s`, `28 KB/s`, `44 KB/s`), live directive feed with timestamps, and bottom oscilloscope waveform.
+2. **Architectural Runtime Stack** (Section 1.1):
+   - React 18 Renderer, Electron IPC Main Process, Core Agent Runtime (EventBus, DAG Scheduler, WorkspaceSafety, Model Router), and Native File System / Git bridges.
+3. **NASA Swarm Topology Network Map** (Section 2):
+   - Apex Level 1, Mid-Level 2 (Design & Coder with bi-directional spec negotiation), and Leaf Level 3 (Research & Tester) with exact spatial layout and color identities.
+4. **6-Stage Autonomous Execution Pipeline** (Section 3):
+   - Intent Ingestion ──► DAG Decomposition ──► Concurrent Dispatch ──► Contract Negotiation ──► Verification Runners ──► Workspace Safety & Git Persistence.
+5. **Concurrency Benchmark Gantt Chart** (Section 3.1):
+   - Compares traditional sequential execution (~48.0s) against ACC parallel swarm execution (~17.5s, **2.74x speedup**).
+6. **Agent Operational Lifecycle & State Machine** (Section 4):
+   - Full state transitions: `IDLE` ──► `QUEUED` ──► `WORKING` ──► `WAITING_IO` / `COLLISION` / `FAILED` ──► `RESOLVED` / `RETRY` ──► `COMPLETED` ──► `SYNTHESIZED`.
+7. **Side-by-Side Floating Pop-up Menu Geometry** (Section 6):
+   - Shows both **Orientation A** (card on left, pop-up to right with `◀───` notch) and **Orientation B** (card on right, pop-up auto-flips to left with `───►` notch), complete with model dropdown, action buttons, token spend matrix, CPU sparklines (`▃▅█▃▅▆▇`), and direct directive prompt input.
+8. **Central Workspace View Switcher Wireframes** (Section 7):
+   - Visual mockups of all 6 dedicated workspace views (`Mission Control`, `Agents Roster`, `Tasks DAG`, `Files Explorer`, `Git Version Control`, and `System Settings`).
+9. **AST Line-Span Collision Detection & 4-Way Arbitration** (Section 9):
+   - Illustrates Coder lines 40-55 and Design lines 48-62 colliding on lines 48-55 of `src/theme.css`, and details the 4 resolution options (`KEEP CODER`, `KEEP DESIGN`, `3-WAY SMART MERGE`, `ORCHESTRATOR SYNTHESIS`).
+10. **Central Typed EventBus & IPC System Architecture** (Section 10):
+    - Asynchronous message exchange connecting Agent Threads, WorkspaceSafety, UI Controllers, and Electron IPC.
+
+---
+
 ## Verification Results
 
 - **Unit Tests**: `npm test -- --run` passed with **12 / 12 passing**.
-- **Type Checking**: `npx tsc --noEmit` exited with code **0**.
+- **Type Checking**: `npx tsc --noEmit` exited with code **0** errors.
 - **Production Build**: `npm run build` compiled cleanly into `dist/assets/`.
+- **Git Remote**: Changes committed and pushed to `origin/main` (`8cd5e7c`).
 - **Dev Server**: Running on `http://localhost:5173/` (HTTP 200 OK).
 
