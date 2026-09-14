@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Agent Command Center Banner](https://img.shields.io/badge/MISSION%20CONTROL-AI%20AGENT%20SWARM-00f0ff?style=for-the-badge&logo=satellite&logoColor=black)
+![Agent Command Center Banner](https://img.shields.io/badge/-AI%20AGENT%20SWARM-00f0ff?style=for-the-badge&logo=satellite&logoColor=black)
 <br/>
 
 _A desktop mission-control interface for running, visualizing, and orchestrating multiple specialized AI coding and research agents concurrently._
