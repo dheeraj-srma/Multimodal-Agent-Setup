@@ -231,51 +231,61 @@
   user-select: none;
 }
 
-/* Spline Channels with Idle vs Active Sequential Flow */
+/* Spline Channels with Idle Quiescent vs Event-Driven Communicating State */
 .spline-channel {
   fill: none;
-  stroke-dasharray: 6 6;
-  transition: stroke-width 0.3s ease, stroke-opacity 0.3s ease, opacity 0.3s ease;
+  stroke-dasharray: 5 5;
+  transition: stroke-width 0.35s cubic-bezier(0.16, 1, 0.3, 1), stroke-opacity 0.35s ease, filter 0.35s ease;
 }
 
 .sc-idle {
-  stroke-opacity: 0.18;
-  stroke-width: 1.4;
+  stroke-opacity: 0.16;
+  stroke-width: 1.35;
   animation: none !important;
+  filter: none !important;
 }
 
-.sc-active-pulse {
+.sc-communicating {
   stroke-opacity: 0.95 !important;
   stroke-width: 2.6 !important;
-  animation: spline-flow 10s linear infinite;
-  filter: drop-shadow(0 0 8px currentColor);
+  filter: drop-shadow(0 0 10px currentColor);
+  stroke-dasharray: 6 4;
 }
 
-.sc-loop-upper.sc-active-pulse {
-  stroke-dasharray: 5 4;
-  animation: spline-flow-reverse 8s linear infinite;
+.sc-loop-upper.sc-communicating,
+.sc-loop-lower.sc-communicating {
+  stroke-dasharray: 6 4;
 }
 
-.sc-loop-lower.sc-active-pulse {
-  stroke-dasharray: 5 4;
-  animation: spline-flow 8s linear infinite;
+/* Event-Driven Transient Packets Layer */
+.transient-packets-layer {
+  pointer-events: none;
 }
 
-@keyframes spline-flow {
-  from {
-    stroke-dashoffset: 240;
+.comm-packet-stream {
+  pointer-events: none;
+}
+
+/* Model Node Destination Arrival Feedback Ripple */
+.arrival-pings-layer {
+  pointer-events: none;
+}
+
+.agent-arrival-ping-circle {
+  animation: ping-arrival 0.65s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes ping-arrival {
+  0% {
+    r: 28px;
+    opacity: 0.85;
+    stroke-width: 3px;
   }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-@keyframes spline-flow-reverse {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: 240;
+  100% {
+    r: 85px;
+    opacity: 0;
+    stroke-width: 1px;
   }
 }
 

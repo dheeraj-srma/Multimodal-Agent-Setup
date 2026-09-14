@@ -174,9 +174,12 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [dynamicPackets, setDynamicPackets] = useState<DynamicPacket[]>([]);
+  const [activeCommunicatingChannels, setActiveCommunicatingChannels] = useState<Set<string>>(new Set());
+  const [arrivalPings, setArrivalPings] = useState<{ id: string; agentId: AgentId; color: string }[]>([]);
   const [hoveredAgentId, setHoveredAgentId] = useState<AgentId | null>(null);
   const [activeRationaleAgentId, setActiveRationaleAgentId] = useState<AgentId | null>(null);
   const processedEventIds = useRef<Set<string>>(new Set());
+  const isInitialMount = useRef<boolean>(true);
 
   // Check if mission is actively running
   const isMissionRunning = mission?.status === 'RUNNING';
@@ -450,94 +453,168 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
     };
   }, [nodePositions.design, nodePositions.coder]);
 
-  // Determine active sequential communication channels based on active tasks
-  const activeChannels = useMemo(() => {
-    const active = new Set<string>();
-    if (!isMissionRunning) return active;
-
-    const tasks = mission?.tasks || [];
-    const runningTask = tasks.find((t) => t.status === 'RUNNING');
-    const runningAgent = runningTask?.agentId;
-
-    if (!runningTask || runningAgent === 'orchestrator') {
-      // Stage 1: Orchestrator is actively planning and dispatching initial directives
-      active.add('orchToDesign');
-      active.add('orchToCoder');
-    } else if (runningAgent === 'design') {
-      // Stage 2: Design is processing tokens and negotiating contract with Coder
-      active.add('designToCoderLoop');
-      active.add('coderToDesignLoop');
-      active.add('designToResearch');
-    } else if (runningAgent === 'coder') {
-      // Stage 3: Coder is implementing features and sending to Tester
-      active.add('coderToTester');
-      active.add('coderToDesignLoop');
-    } else if (runningAgent === 'tester') {
-      // Stage 4: Tester is auditing and reporting results back to Orchestrator
-      active.add('testerToOrch');
-    } else if (runningAgent === 'research') {
-      // Research findings flowing to Orchestrator
-      active.add('researchToOrch');
+  // Helper to reverse SVG cubic Bezier path: "M x0,y0 C x1,y1 x2,y2 x3,y3" -> "M x3,y3 C x2,y2 x1,y1 x0,y0"
+  const reverseSvgPath = (d: string): string => {
+    const match = d.match(
+      /M\s*([-\d.]+)[,\s]+([-\d.]+)\s*C\s*([-\d.]+)[,\s]+([-\d.]+)\s+([-\d.]+)[,\s]+([-\d.]+)\s+([-\d.]+)[,\s]+([-\d.]+)/i
+    );
+    if (match) {
+      const [, x0, y0, x1, y1, x2, y2, x3, y3] = match;
+      return `M ${x3},${y3} C ${x2},${y2} ${x1},${y1} ${x0},${y0}`;
     }
-
-    return active;
-  }, [isMissionRunning, mission?.tasks]);
-
-  // Listen for real message/task events to trigger transient packets
-  useEffect(() => {
-    if (recentEvents.length === 0) return;
-    const latest = recentEvents[recentEvents.length - 1];
-    if (processedEventIds.current.has(latest.id)) return;
-    processedEventIds.current.add(latest.id);
-
-    if (latest.type === 'AGENT_MESSAGE') {
-      const msg = latest.payload as AgentMessagePayload;
-      if (msg.to !== 'broadcast' && nodePositions[msg.from] && nodePositions[msg.to]) {
-        const pathD = getDynamicPath(msg.from, msg.to);
-        if (pathD) {
-          addDynamicPacket(msg.from, msg.to, ROLE_COLORS[msg.from] || '#00f0ff', msg.subject, pathD);
-        }
-      }
-    } else if (latest.type === 'TASK_CREATED') {
-      const task = latest.payload as any;
-      const tgt = task.agentId as AgentId;
-      if (tgt && nodePositions[tgt]) {
-        const pathD = getDynamicPath('orchestrator', tgt);
-        if (pathD) {
-          addDynamicPacket('orchestrator', tgt, '#38bdf8', 'TASK', pathD);
-        }
-      }
-    } else if (latest.type === 'TASK_COMPLETED') {
-      const task = (latest.payload as any).task;
-      const src = task?.agentId as AgentId;
-      if (src && nodePositions[src]) {
-        const pathD = getDynamicPath(src, 'orchestrator');
-        if (pathD) {
-          addDynamicPacket(src, 'orchestrator', '#34d399', 'DONE', pathD);
-        }
-      }
-    }
-  }, [recentEvents, nodePositions]);
-
-  const getDynamicPath = (from: AgentId, to: AgentId): string | null => {
-    if (from === 'orchestrator' && to === 'design') return pipelinePaths.orchToDesign;
-    if (from === 'orchestrator' && to === 'coder') return pipelinePaths.orchToCoder;
-    if (from === 'design' && to === 'coder') return pipelinePaths.designToCoderLoop;
-    if (from === 'coder' && to === 'design') return pipelinePaths.coderToDesignLoop;
-    if (from === 'design' && to === 'research') return pipelinePaths.designToResearch;
-    if (from === 'coder' && to === 'tester') return pipelinePaths.coderToTester;
-    if (from === 'research' && to === 'orchestrator') return pipelinePaths.researchToOrch;
-    if (from === 'tester' && to === 'orchestrator') return pipelinePaths.testerToOrch;
-    return `M ${nodePositions[from].x},${nodePositions[from].y} L ${nodePositions[to].x},${nodePositions[to].y}`;
+    return d;
   };
 
+  // Map agent communication pair to the corresponding spline channel id
+  const getChannelIdForPair = (from: AgentId, to: AgentId): string | null => {
+    if ((from === 'orchestrator' && to === 'design') || (from === 'design' && to === 'orchestrator')) return 'orchToDesign';
+    if ((from === 'orchestrator' && to === 'coder') || (from === 'coder' && to === 'orchestrator')) return 'orchToCoder';
+    if (from === 'design' && to === 'coder') return 'designToCoderLoop';
+    if (from === 'coder' && to === 'design') return 'coderToDesignLoop';
+    if ((from === 'design' && to === 'research') || (from === 'research' && to === 'design')) return 'designToResearch';
+    if ((from === 'coder' && to === 'tester') || (from === 'tester' && to === 'coder')) return 'coderToTester';
+    if ((from === 'research' && to === 'orchestrator') || (from === 'orchestrator' && to === 'research')) return 'researchToOrch';
+    if ((from === 'tester' && to === 'orchestrator') || (from === 'orchestrator' && to === 'tester')) return 'testerToOrch';
+    return null;
+  };
+
+  // Calculate pixel-accurate spline path for communication in either direction
+  const getDynamicPath = (from: AgentId, to: AgentId): string | null => {
+    if (from === 'orchestrator' && to === 'design') return pipelinePaths.orchToDesign;
+    if (from === 'design' && to === 'orchestrator') return reverseSvgPath(pipelinePaths.orchToDesign);
+
+    if (from === 'orchestrator' && to === 'coder') return pipelinePaths.orchToCoder;
+    if (from === 'coder' && to === 'orchestrator') return reverseSvgPath(pipelinePaths.orchToCoder);
+
+    if (from === 'design' && to === 'coder') return pipelinePaths.designToCoderLoop;
+    if (from === 'coder' && to === 'design') return pipelinePaths.coderToDesignLoop;
+
+    if (from === 'design' && to === 'research') return pipelinePaths.designToResearch;
+    if (from === 'research' && to === 'design') return reverseSvgPath(pipelinePaths.designToResearch);
+
+    if (from === 'coder' && to === 'tester') return pipelinePaths.coderToTester;
+    if (from === 'tester' && to === 'coder') return reverseSvgPath(pipelinePaths.coderToTester);
+
+    if (from === 'research' && to === 'orchestrator') return pipelinePaths.researchToOrch;
+    if (from === 'orchestrator' && to === 'research') return reverseSvgPath(pipelinePaths.researchToOrch);
+
+    if (from === 'tester' && to === 'orchestrator') return pipelinePaths.testerToOrch;
+    if (from === 'orchestrator' && to === 'tester') return reverseSvgPath(pipelinePaths.testerToOrch);
+
+    if (nodePositions[from] && nodePositions[to]) {
+      const p1 = nodePositions[from];
+      const p2 = nodePositions[to];
+      const mx = (p1.x + p2.x) / 2;
+      return `M ${p1.x},${p1.y} C ${mx},${p1.y} ${mx},${p2.y} ${p2.x},${p2.y}`;
+    }
+    return null;
+  };
+
+  // Dispatch a transient communication packet with line illumination and arrival feedback
   const addDynamicPacket = (from: AgentId, to: AgentId, color: string, label: string, pathD: string) => {
     const packetId = `pkt-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-    setDynamicPackets((prev) => [...prev.slice(-6), { id: packetId, from, to, color, label, pathD }]);
+    const channelId = getChannelIdForPair(from, to);
+
+    // 1. Illuminate communicating channel strictly for the duration of the packet travel
+    if (channelId) {
+      setActiveCommunicatingChannels((prev) => {
+        const next = new Set(prev);
+        next.add(channelId);
+        return next;
+      });
+      setTimeout(() => {
+        setActiveCommunicatingChannels((prev) => {
+          const next = new Set(prev);
+          next.delete(channelId);
+          return next;
+        });
+      }, 1400);
+    }
+
+    // 2. Add multi-bead packet stream
+    setDynamicPackets((prev) => [...prev.slice(-8), { id: packetId, from, to, color, label, pathD }]);
+
+    // 3. Trigger arrival feedback ripple as packet reaches recipient node (~1150ms)
+    setTimeout(() => {
+      const pingId = `ping-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+      setArrivalPings((prev) => [...prev, { id: pingId, agentId: to, color }]);
+      setTimeout(() => {
+        setArrivalPings((prev) => prev.filter((p) => p.id !== pingId));
+      }, 650);
+    }, 1150);
+
+    // 4. Remove packet when animation completes
     setTimeout(() => {
       setDynamicPackets((prev) => prev.filter((p) => p.id !== packetId));
     }, 1400);
   };
+
+  // Listen for real message/task events to trigger transient packets strictly when models communicate
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      // Mark all past events as already processed so historical events don't trigger animations on mount
+      recentEvents.forEach((ev) => processedEventIds.current.add(ev.id));
+      return;
+    }
+
+    const unprocessed = recentEvents.filter((ev) => !processedEventIds.current.has(ev.id));
+    if (unprocessed.length === 0) return;
+
+    unprocessed.forEach((ev) => processedEventIds.current.add(ev.id));
+
+    // Process new communication events
+    for (const ev of unprocessed.slice(-6)) {
+      if (ev.type === 'AGENT_MESSAGE') {
+        const msg = ev.payload as AgentMessagePayload;
+        if (msg.to === 'broadcast') {
+          const others = (['orchestrator', 'design', 'coder', 'research', 'tester'] as AgentId[]).filter(
+            (id) => id !== msg.from
+          );
+          others.forEach((target) => {
+            if (nodePositions[target]) {
+              const pathD = getDynamicPath(msg.from, target);
+              if (pathD) {
+                addDynamicPacket(msg.from, target, ROLE_COLORS[msg.from] || '#00f0ff', msg.subject || 'DATA', pathD);
+              }
+            }
+          });
+        } else if (msg.to && nodePositions[msg.from] && nodePositions[msg.to]) {
+          const pathD = getDynamicPath(msg.from, msg.to);
+          if (pathD) {
+            addDynamicPacket(msg.from, msg.to, ROLE_COLORS[msg.from] || '#00f0ff', msg.subject || 'MSG', pathD);
+          }
+        }
+      } else if (ev.type === 'TASK_CREATED') {
+        const task = ev.payload as any;
+        const tgt = task.agentId as AgentId;
+        if (tgt && nodePositions[tgt]) {
+          const pathD = getDynamicPath('orchestrator', tgt);
+          if (pathD) {
+            addDynamicPacket('orchestrator', tgt, '#38bdf8', 'TASK', pathD);
+          }
+        }
+      } else if (ev.type === 'TASK_COMPLETED') {
+        const task = (ev.payload as any).task;
+        const src = task?.agentId as AgentId;
+        if (src && nodePositions[src]) {
+          const pathD = getDynamicPath(src, 'orchestrator');
+          if (pathD) {
+            addDynamicPacket(src, 'orchestrator', '#34d399', 'DONE', pathD);
+          }
+        }
+      } else if (ev.type === 'TASK_FAILED') {
+        const task = (ev.payload as any).task;
+        const src = task?.agentId as AgentId;
+        if (src && nodePositions[src]) {
+          const pathD = getDynamicPath(src, 'orchestrator');
+          if (pathD) {
+            addDynamicPacket(src, 'orchestrator', '#f43f5e', 'FAILED', pathD);
+          }
+        }
+      }
+    }
+  }, [recentEvents, nodePositions]);
 
   const getModelForAgent = (agentId: AgentId): DetailedAIModel => {
     const assignedId = customAssignments[agentId] || TOPOLOGY_PRESETS[topologyMode]?.assignments[agentId];
@@ -741,13 +818,13 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               id="pathOrchDesign"
               d={pipelinePaths.orchToDesign}
               stroke="url(#gradOrchDesign)"
-              className={`spline-channel ${activeChannels.has('orchToDesign') ? 'sc-active-pulse' : 'sc-idle'}`}
+              className={`spline-channel ${activeCommunicatingChannels.has('orchToDesign') ? 'sc-communicating' : 'sc-idle'}`}
             />
             <path
               id="pathOrchCoder"
               d={pipelinePaths.orchToCoder}
               stroke="url(#gradOrchCoder)"
-              className={`spline-channel ${activeChannels.has('orchToCoder') ? 'sc-active-pulse' : 'sc-idle'}`}
+              className={`spline-channel ${activeCommunicatingChannels.has('orchToCoder') ? 'sc-communicating' : 'sc-idle'}`}
             />
             
             {/* Bi-Directional Negotiation Loop between Design and Coder */}
@@ -755,131 +832,88 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
               id="pathDesignCoderLoop"
               d={pipelinePaths.designToCoderLoop}
               stroke="url(#gradDesignCoder)"
-              className={`spline-channel sc-loop-upper ${activeChannels.has('designToCoderLoop') ? 'sc-active-pulse' : 'sc-idle'}`}
+              className={`spline-channel sc-loop-upper ${activeCommunicatingChannels.has('designToCoderLoop') ? 'sc-communicating' : 'sc-idle'}`}
             />
             <path
               id="pathCoderDesignLoop"
               d={pipelinePaths.coderToDesignLoop}
               stroke="url(#gradCoderDesign)"
-              className={`spline-channel sc-loop-lower ${activeChannels.has('coderToDesignLoop') ? 'sc-active-pulse' : 'sc-idle'}`}
+              className={`spline-channel sc-loop-lower ${activeCommunicatingChannels.has('coderToDesignLoop') ? 'sc-communicating' : 'sc-idle'}`}
             />
 
             <path
               id="pathDesignResearch"
               d={pipelinePaths.designToResearch}
               stroke="url(#gradDesignResearch)"
-              className={`spline-channel ${activeChannels.has('designToResearch') ? 'sc-active-pulse' : 'sc-idle'}`}
+              className={`spline-channel ${activeCommunicatingChannels.has('designToResearch') ? 'sc-communicating' : 'sc-idle'}`}
             />
             <path
               id="pathCoderTester"
               d={pipelinePaths.coderToTester}
               stroke="url(#gradCoderTester)"
-              className={`spline-channel ${activeChannels.has('coderToTester') ? 'sc-active-pulse' : 'sc-idle'}`}
+              className={`spline-channel ${activeCommunicatingChannels.has('coderToTester') ? 'sc-communicating' : 'sc-idle'}`}
             />
             <path
               id="pathResearchOrch"
               d={pipelinePaths.researchToOrch}
               stroke="url(#gradResearchOrch)"
-              className={`spline-channel ${activeChannels.has('researchToOrch') ? 'sc-active-pulse' : 'sc-idle'}`}
+              className={`spline-channel ${activeCommunicatingChannels.has('researchToOrch') ? 'sc-communicating' : 'sc-idle'}`}
             />
             <path
               id="pathTesterOrch"
               d={pipelinePaths.testerToOrch}
               stroke="url(#gradTesterOrch)"
-              className={`spline-channel ${activeChannels.has('testerToOrch') ? 'sc-active-pulse' : 'sc-idle'}`}
+              className={`spline-channel ${activeCommunicatingChannels.has('testerToOrch') ? 'sc-communicating' : 'sc-idle'}`}
             />
           </g>
 
-          {/* 2. Active Communication Particles: Follow dynamic paths during task execution */}
-          {isMissionRunning && (
-            <g className="continuous-particles-layer">
-              {/* Stage 1: Orch -> Coder Active Transfer */}
-              {activeChannels.has('orchToCoder') && (
-                <>
-                  <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
-                    <animateMotion dur="1.0s" repeatCount="indefinite" path={pipelinePaths.orchToCoder} begin="0s" />
-                  </circle>
-                  <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
-                    <animateMotion dur="1.0s" repeatCount="indefinite" path={pipelinePaths.orchToCoder} begin="0.3s" />
-                  </circle>
-                  <circle r="4.2" fill="#34d399" filter="url(#packetGlow)">
-                    <animateMotion dur="1.0s" repeatCount="indefinite" path={pipelinePaths.orchToCoder} begin="0.6s" />
-                  </circle>
-                </>
-              )}
-
-              {/* Stage 1: Orch -> Design Active Transfer */}
-              {activeChannels.has('orchToDesign') && (
-                <>
-                  <circle r="3.8" fill="#38bdf8" filter="url(#packetGlow)">
-                    <animateMotion dur="1.6s" repeatCount="indefinite" path={pipelinePaths.orchToDesign} begin="0s" />
-                  </circle>
-                  <circle r="3.6" fill="#38bdf8" filter="url(#packetGlow)">
-                    <animateMotion dur="1.6s" repeatCount="indefinite" path={pipelinePaths.orchToDesign} begin="0.8s" />
-                  </circle>
-                </>
-              )}
-
-              {/* Stage 2: Design <-> Coder Spec Negotiation Loop */}
-              {activeChannels.has('designToCoderLoop') && (
-                <>
-                  <circle r="3.8" fill="#c084fc" filter="url(#packetGlow)">
-                    <animateMotion dur="1.4s" repeatCount="indefinite" path={pipelinePaths.designToCoderLoop} begin="0s" />
-                  </circle>
-                  <circle r="3.8" fill="#34d399" filter="url(#packetGlow)">
-                    <animateMotion dur="1.4s" repeatCount="indefinite" path={pipelinePaths.coderToDesignLoop} begin="0s" />
-                  </circle>
-                </>
-              )}
-
-              {/* Stage 2: Design -> Research specs */}
-              {activeChannels.has('designToResearch') && (
-                <circle r="3.4" fill="#c084fc" filter="url(#packetGlow)">
-                  <animateMotion dur="2.0s" repeatCount="indefinite" path={pipelinePaths.designToResearch} begin="0s" />
-                </circle>
-              )}
-
-              {/* Stage 3: Coder -> Tester Implementation Transfer */}
-              {activeChannels.has('coderToTester') && (
-                <>
-                  <circle r="4.0" fill="#f43f5e" filter="url(#packetGlow)">
-                    <animateMotion dur="1.3s" repeatCount="indefinite" path={pipelinePaths.coderToTester} begin="0s" />
-                  </circle>
-                  <circle r="3.6" fill="#f43f5e" filter="url(#packetGlow)">
-                    <animateMotion dur="1.3s" repeatCount="indefinite" path={pipelinePaths.coderToTester} begin="0.55s" />
-                  </circle>
-                </>
-              )}
-
-              {/* Stage 4: Tester -> Orch Verification Feedback */}
-              {activeChannels.has('testerToOrch') && (
-                <circle r="3.5" fill="#f43f5e" filter="url(#packetGlow)">
-                  <animateMotion dur="2.4s" repeatCount="indefinite" path={pipelinePaths.testerToOrch} begin="0s" />
-                </circle>
-              )}
-
-              {/* Research -> Orch Feedback */}
-              {activeChannels.has('researchToOrch') && (
-                <circle r="3.5" fill="#fb923c" filter="url(#packetGlow)">
-                  <animateMotion dur="2.6s" repeatCount="indefinite" path={pipelinePaths.researchToOrch} begin="0s" />
-                </circle>
-              )}
-            </g>
-          )}
-
-          {/* 3. Real Event Transient Packets */}
+          {/* 2. Active Event Communication Packets: Animated strictly when models communicate */}
           <g className="transient-packets-layer">
             {dynamicPackets.map((pkt) => (
-              <circle key={pkt.id} r="5" fill={pkt.color} filter="url(#packetGlow)">
-                <animateMotion dur="1.3s" fill="freeze" path={pkt.pathD} />
-              </circle>
+              <g key={pkt.id} className="comm-packet-stream">
+                {/* Micro trailing tail particle */}
+                <circle r="2.5" fill={pkt.color} opacity="0.4">
+                  <animateMotion dur="1.3s" fill="freeze" path={pkt.pathD} begin="0.10s" />
+                </circle>
+                {/* Secondary trailing particle */}
+                <circle r="3.6" fill={pkt.color} opacity="0.75" filter="url(#packetGlow)">
+                  <animateMotion dur="1.3s" fill="freeze" path={pkt.pathD} begin="0.05s" />
+                </circle>
+                {/* Primary lead packet head */}
+                <circle r="5.2" fill={pkt.color} filter="url(#packetGlow)">
+                  <animateMotion dur="1.3s" fill="freeze" path={pkt.pathD} begin="0s" />
+                </circle>
+              </g>
             ))}
+          </g>
+
+          {/* 3. Destination Model Arrival Feedback Ripples */}
+          <g className="arrival-pings-layer">
+            {arrivalPings.map((ping) => {
+              const pos = nodePositions[ping.agentId];
+              if (!pos) return null;
+              return (
+                <circle
+                  key={ping.id}
+                  cx={pos.x}
+                  cy={pos.y}
+                  className="agent-arrival-ping-circle"
+                  stroke={ping.color}
+                  fill="none"
+                />
+              );
+            })}
           </g>
 
           {/* 4. Central Bi-Directional Negotiation Loop Badge */}
           <g
             transform={`translate(${negotiationBadgePos.x}, ${negotiationBadgePos.y})`}
-            className={`negotiation-loop-badge-group ${activeChannels.has('designToCoderLoop') ? 'nlb-active' : 'nlb-idle'}`}
+            className={`negotiation-loop-badge-group ${
+              activeCommunicatingChannels.has('designToCoderLoop') ||
+              activeCommunicatingChannels.has('coderToDesignLoop')
+                ? 'nlb-active'
+                : 'nlb-idle'
+            }`}
           >
             <rect x="-115" y="-12" width="230" height="24" rx="12" className="negotiation-badge-pill" />
             <text x="0" y="4" className="negotiation-badge-text">
@@ -890,9 +924,13 @@ export const AgentGraph: React.FC<AgentGraphProps> = ({
           {/* 5. Floating Data Transfer Volume Pills - Dynamically Track Nodes */}
           <g className="data-badges-layer">
             {dataBadges.map((b) => {
-              const isActive = activeChannels.has(b.id);
+              const isCommunicating = activeCommunicatingChannels.has(b.id);
               return (
-                <g key={b.id} transform={`translate(${b.x}, ${b.y})`} className={`data-badge-group ${isActive ? 'badge-active' : 'badge-idle'}`}>
+                <g
+                  key={b.id}
+                  transform={`translate(${b.x}, ${b.y})`}
+                  className={`data-badge-group ${isCommunicating ? 'badge-active' : 'badge-idle'}`}
+                >
                   <rect x="-85" y="-11" width="170" height="22" rx="11" className="data-transfer-pill" />
                   <text x="0" y="4" className="data-transfer-text" style={{ fill: b.color }}>
                     {b.text}
