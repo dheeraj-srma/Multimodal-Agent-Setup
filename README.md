@@ -46,43 +46,6 @@ The **AI Agent Command Center (ACC)** is an enterprise-grade desktop environment
   <em>Figure 1: Full AI Agent Command Center (ACC) Mission Control interface featuring the Directive Deck, SVG Swarm Topology Canvas, Live Event Feed, and Real-Time Telemetry Dock.</em>
 </p>
 
-```text
-╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
-║                                AI AGENT COMMAND CENTER (ACC) • MISSION CONTROL HUD                                 ║
-╠════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
-║SWARM: 5 ACTIVE  │  MISSION: 00:14:32  │  SPEEDUP: 2.8x  │  TOKENS: 142.5k  │  SPEND: $0.000  │  [ PAUSE ] [ STOP ] ║
-╠══════════════════════╦═════════════════════════════════════════════════════════════════╦═══════════════════════════╣
-║ WORKSPACE VIEWS      ║  DIRECTIVE DECK                                                 ║ LIVE DIRECTIVE FEED       ║
-║                      ║  ┌─────────────────────────────────────────────────────────┐    ║                           ║
-║  [▶] Mission Ctrl    ║  │ "Refactor auth flow, audit WCAG contrast, benchmark AST"│    ║ [11:04:12] ORCH: DAG plan ║
-║  [ ] Swarm Roster    ║  └─────────────────────────────────────┬───────────────────┘    ║   Decomposed: 5 stages    ║
-║  [ ] Task Pipeline   ║                                        │  [ ▶ RUN MISSION ]     ║                           ║
-║  [ ] Files & Diffs   ║  ──────────────────────────────────────┴────────────────────    ║ [11:04:15] DSGN: Tokens   ║
-║  [ ] Git Operations  ║  SWARM TOPOLOGY CANVAS                    [ Auto Arrange ⟲ ]    ║   WCAG contrast: pass     ║
-║  [ ] System Settings ║                                                                 ║                           ║
-║                      ║                    ┌─────────────────────────┐                  ║ [11:04:18] CODE: AST      ║
-║ ───────────────────  ║                    │    APEX ORCHESTRATOR    │                  ║   Refactoring applied     ║
-║ TOPOLOGY PRESETS     ║                    │  Gemini 1.5 Pro • 34%   │                  ║                           ║
-║                      ║                    └────────────┬────────────┘                  ║ [11:04:22] RSCH: Bench    ║
-║  (*) Cross-Provider  ║                                 │                               ║   12 citations indexed    ║
-║  ( ) All Gemini Pro  ║                 ┌───────────────┴───────────────┐               ║                           ║
-║  ( ) All Claude 3.5  ║                 ▼ (12 KB/s)                     ▼ (28 KB/s)     ║ [11:04:25] TEST: Verify   ║
-║  ( ) Local Ollama    ║    ┌──────────────────────┐           ┌──────────────────────┐  ║   Regression: 0 errors    ║
-║                      ║    │     DESIGN & UX      │◄─⟲ 3 Cyc─►│    CODER & BACKEND   │  ║                           ║
-║ ───────────────────  ║    │ Claude 3.5 • 78%     │  Spec-Net │ GPT-4o • 62%         │  ║ ───────────────────────── ║
-║ ACTIVE SWARM ROSTER  ║    └──────────┬───────────┘           └──────────┬───────────┘  ║ OPERATOR DISPATCH         ║
-║                      ║               │ (8 KB/s)                         │ (44 KB/s)    ║ ┌───────────────────────┐ ║
-║  ● Orchestrator      ║               ▼                                  ▼              ║ │ Message all agents...│>│║
-║  ● Design Agent      ║    ┌──────────────────────┐           ┌──────────────────────┐  ║ └───────────────────────┘ ║
-║  ● Coder Agent       ║    │    RESEARCH AGENT    │           │    TEST & REVIEW     │  ║                           ║
-║  ● Research Agent    ║    │ Sonar Deep • 100%    │           │ Llama 3.1 • 45%      │  ║ Shortcuts:                ║
-║  ● Tester Agent      ║    └──────────────────────┘           └──────────────────────┘  ║ Enter: Dispatch prompt    ║
-║                      ║                                                                 ║ Alt+P: Pause Swarm        ║
-╠══════════════════════╩═════════════════════════════════════════════════════════════════╩═══════════════════════════╣
-║    TELEMETRY DOCK: ~~~/\_/\~~~ Active  │  Branch: main (synced)  │  CPU: 42%  │  RAM: 1.4 GB  │  Collisions: 0     ║
-╚════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
-```
-
 ### 🧱 Architectural Runtime Stack
 
 ```text
@@ -344,19 +307,16 @@ Each agent has a tailored role, dedicated color identity, live resource metrics,
 
 ACC supports running different models from different frontier providers simultaneously, or unifying the entire swarm under a single subscription:
 
-```text
-┌───────────────────────┬──────────────┬───────────────┬──────────────┬──────────────────┐
-│ Model Name            │ Provider     │ Context       │ Latency      │ Pricing / 1M Tok │
-├───────────────────────┼──────────────┼───────────────┼──────────────┼──────────────────┤
-│ Gemini 1.5 Pro        │ Google       │ 2,000,000 tok │ ~350ms       │ $0.00 (Native)   │
-│ Claude 3.5 Sonnet     │ Anthropic    │   200,000 tok │ ~420ms       │ $3.00 / $15.00   │
-│ GPT-4o                │ OpenAI       │   128,000 tok │ ~380ms       │ $2.50 / $10.00   │
-│ Llama 3.1 405B        │ Meta / Local │   128,000 tok │ ~480ms       │ $0.80 / $2.40    │
-│ Sonar Deep Research   │ Perplexity   │   128,000 tok │ ~650ms       │ $1.00 / $5.00    │
-│ Mistral Large 2       │ Mistral      │   128,000 tok │ ~390ms       │ $2.00 / $6.00    │
-│ Ollama Local Llama    │ Localhost    │    32,000 tok │ ~210ms       │ $0.00 (Offline)  │
-└───────────────────────┴──────────────┴───────────────┴──────────────┴──────────────────┘
-```
+| Model Name | Provider | Context Window | Latency | Pricing / 1M Tok |
+|---|---|---|---|---|
+| **Gemini 1.5 Pro** | Google | 2,000,000 tok | ~350ms | **$0.00** (Native) |
+| **Claude 3.5 Sonnet** | Anthropic | 200,000 tok | ~420ms | $3.00 / $15.00 |
+| **GPT-4o** | OpenAI | 128,000 tok | ~380ms | $2.50 / $10.00 |
+| **Llama 3.1 405B** | Meta / Local | 128,000 tok | ~480ms | $0.80 / $2.40 |
+| **Sonar Deep Research** | Perplexity | 128,000 tok | ~650ms | $1.00 / $5.00 |
+| **Mistral Large 2** | Mistral | 128,000 tok | ~390ms | $2.00 / $6.00 |
+| **Ollama Local Llama** | Localhost | 32,000 tok | ~210ms | **$0.00** (Offline) |
+
 
 <p align="center">
   <img src="Screenshots/Sytem%20Configuration.png" alt="Multi-Model Swarm Architecture Configuration Modal" width="100%" />
@@ -385,66 +345,6 @@ Clicking any agent card on the canvas opens the inspection menu as an anchored f
 <p align="center">
   <em>Figure 4: Anchored Side-by-Side Floating Inspector — dynamically positioned adjacent to the clicked agent node, featuring model assignment, resource telemetry, direct operator directive injection, and real-time activity stream.</em>
 </p>
-
-```text
-╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
-║                                     SIDE-BY-SIDE FLOATING INSPECTOR GEOMETRY                                     ║
-╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
-║                                                                                                                  ║
-║ [ORIENTATION A: NODE ON LEFT HALF OF CANVAS (x <= width/2) ──► POPUP OPENS TO THE RIGHT]                         ║
-║                                                                                                                  ║
-║       CANVAS AGENT NODE                 POINTER NOTCH              ANCHORED FLOATING POP-UP MENU                 ║
-║ ┌──────────────────────────────┐                            ┌──────────────────────────────────────────────────┐ ║
-║ │ Design Agent                 │                            │ Design Agent  @design                        [X] │ ║
-║ │ DESIGN & UX                  │                            ├──────────────────────────────────────────────────┤ ║
-║ │ Working... 78%               │                            │ ASSIGNED: [ Claude 3.5 Sonnet (Anthropic)     ▼ ]│ ║
-║ │ ──────────────────────────── │                            ├──────────────────────────────────────────────────┤ ║
-║ │ Sparkline: [|||||||||] 26%   │    ◄────────────────►      │ [ PAUSE ]           [ RETRY ]           [ KILL ] │ ║
-║ │ 18.4k tok • CPU 26%          │   [data-placement="left"]  ├──────────────────────────────────────────────────┤ ║
-║ │ ┌──────────────────────────┐ │                            │ TOKEN & COST TRACKING                            │ ║
-║ │ │ UI Specs & Design Tokens │ │                            │ Prompt: 18,400 tok    │ Completion: 4,200 tok    │ ║
-║ │ └──────────────────────────┘ │                            │ Total:  22,600 tok    │ Est. Spend: $0.000       │ ║
-║ └──────────────────────────────┘                            ├──────────────────────────────────────────────────┤ ║
-║                                                             │ RESOURCE ALLOCATION                              │ ║
-║                                                             │ CPU Usage:  38%       │ Memory: 240 MB           │ ║
-║                                                             │ Progress:   78%       │ Status: WORKING          │ ║
-║                                                             ├──────────────────────────────────────────────────┤ ║
-║                                                             │ DIRECT OPERATOR DIRECTIVE                        │ ║
-║                                                             │ ┌──────────────────────────────────────┬───────┐ │ ║
-║                                                             │ │ Send custom prompt directive...      │ [ > ] │ │ ║
-║                                                             │ └──────────────────────────────────────┴───────┘ │ ║
-║                                                             ├──────────────────────────────────────────────────┤ ║
-║                                                             │ ACTIVITY STREAM (15 EVENTS)                      │ ║
-║                                                             │ [11:04:15] [LOG] Color palettes synthesized      │ ║
-║                                                             │ [11:04:18] [TASK] UI wireframe specs dispatched  │ ║
-║                                                             └──────────────────────────────────────────────────┘ ║
-║                                                                                                                  ║
-║ [ORIENTATION B: NODE ON RIGHT HALF OF CANVAS (x > width/2) ──► AUTO-FLIPS TO THE LEFT]                           ║
-║                                                                                                                  ║
-║       ANCHORED FLOATING POP-UP MENU             POINTER NOTCH              CANVAS AGENT NODE                     ║
-║ ┌──────────────────────────────────────────────────┐                            ┌──────────────────────────────┐ ║
-║ │ Coder Agent  @coder                          [X] │                            │ Coder Agent                  │ ║
-║ ├──────────────────────────────────────────────────┤                            │ CODER & BACKEND              │ ║
-║ │ ASSIGNED: [ GPT-4o (OpenAI Frontier)          ▼ ]│                            │ Working... 62%               │ ║
-║ ├──────────────────────────────────────────────────┤                            │ ──────────────────────────── │ ║
-║ │ [ PAUSE ]           [ RETRY ]           [ KILL ] │    ◄────────────────►      │ Sparkline: [|||||||||] 34%   │ ║
-║ ├──────────────────────────────────────────────────┤  [data-placement="right"]  │ 28.1k tok • CPU 34%          │ ║
-║ │ TOKEN & COST TRACKING                            │                            │ ┌──────────────────────────┐ │ ║
-║ │ Prompt: 28,100 tok    │ Completion: 8,400 tok    │                            │ │ AST Refactoring Engine   │ │ ║
-║ │ Total:  36,500 tok    │ Est. Spend: $0.000       │                            │ └──────────────────────────┘ │ ║
-║ ├──────────────────────────────────────────────────┤                            └──────────────────────────────┘ ║
-║ │ RESOURCE ALLOCATION                              │                                                             ║
-║ │ CPU Usage:  34%       │ Memory: 310 MB           │                                                             ║
-║ │ Progress:   62%       │ Status: WORKING          │                                                             ║
-║ ├──────────────────────────────────────────────────┤                                                             ║
-║ │ DIRECT OPERATOR DIRECTIVE                        │                                                             ║
-║ │ ┌──────────────────────────────────────┬───────┐ │                                                             ║
-║ │ │ Send custom prompt directive...      │ [ > ] │ │                                                             ║
-║ │ └──────────────────────────────────────┴───────┘ │                                                             ║
-║ └──────────────────────────────────────────────────┘                                                             ║
-║                                                                                                                  ║
-╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
-```
 
 ### Dynamic Spatial Features
 
@@ -494,51 +394,15 @@ The collapsible and resizable bottom telemetry dock provides three dedicated ope
 
 Switch between specialized operational dashboards with zero page reloads:
 
-```text
-╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
-║                                     CENTRAL WORKSPACE DYNAMIC VIEW SWITCHER                                      ║
-╠══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╣
-║ SIDEBAR NAVIGATION   ║ CORRESPONDING FULL-SCREEN VIEW (IN CENTER WORKSPACE COLUMN)                               ║
-╠══════════════════════╬═══════════════════════════════════════════════════════════════════════════════════════════╣
-║ [1] Mission Control  ║ ┌──────────────────────────────────────────────────────────────────────────────────────┐  ║
-║     (Active View)    ║ │ DIRECTIVE DECK + RUN BUTTON                                                          │  ║
-║                      ║ │ DRAGGABLE TOPOLOGY CANVAS (SVG CUBIC BEZIER SPLINES & DATA PACKET FLOW)             │   ║
-║                      ║ │ COMPACT AGENT STATUS CARDS + ANCHORED FLOATING INSPECTOR MENUS                       │  ║
-║                      ║ └──────────────────────────────────────────────────────────────────────────────────────┘  ║
-╠══════════════════════╬═══════════════════════════════════════════════════════════════════════════════════════════╣
-║ [2] Swarm Roster     ║ ┌──────────────────────────────────────────────────────────────────────────────────────┐  ║
-║     (Agent Fleet)    ║ │ SWARM ROSTER (5 AGENTS EXPANDED): [ Resume All ]  [ Pause All ]  [ Stop All ]        │  ║
-║                      ║ │ • Hardware Telemetry Sparklines ([|||||||]) • Live CPU % & RAM Allocation           │   ║
-║                      ║ │ • Modified Files Touched Tracker            • Inter-Agent Message Traffic Counters   │  ║
-║                      ║ └──────────────────────────────────────────────────────────────────────────────────────┘  ║
-╠══════════════════════╬═══════════════════════════════════════════════════════════════════════════════════════════╣
-║ [3] Task DAG Pipeline║ ┌──────────────────────────────────────────────────────────────────────────────────────┐  ║
-║     (Pipeline Board) ║ │ MULTI-STAGE EXECUTION DAG: [Stage 1: Intent] ──► [Stage 2: DAG] ──► [Stage 3: Work] │   ║
-║                      ║ │ • Task State Badges: [ RUNNING ]  [ QUEUED ]  [ COMPLETED 100% ]  [ FAILED ]         │  ║
-║                      ║ │ • Real-Time Concurrency Math: 2.74x Speedup Multiplier & Duration Timers             │  ║
-║                      ║ └──────────────────────────────────────────────────────────────────────────────────────┘  ║
-╠══════════════════════╬═══════════════════════════════════════════════════════════════════════════════════════════╣
-║ [4] Workspace Files  ║ ┌─────────────────────────────────────┬────────────────────────────────────────────────┐  ║
-║     (Diff Explorer)  ║ │ WORKSPACE FILE TREE (~mod, +add)    │ UNIFIED SYNTAX DIFF VIEWER                     │  ║
-║                      ║ │ ~ src/components/Theme.css          │ @@ -48,7 +48,12 @@                             │  ║
-║                      ║ │ + src/agents/Orchestrator.ts        │ - const oldColor = '#fff';                     │  ║
-║                      ║ │ Immutable Shields (.git, node_mod)  │ + const glassTheme = 'rgba(11,29,58,0.7)';     │  ║
-║                      ║ └─────────────────────────────────────┴────────────────────────────────────────────────┘  ║
-╠══════════════════════╬═══════════════════════════════════════════════════════════════════════════════════════════╣
-║ [5] Git Operations   ║ ┌─────────────────────────────────────┬────────────────────────────────────────────────┐  ║
-║     (Version Ctrl)   ║ │ BRANCH STATUS: main (Ahead 0)       │ COMMIT HISTORY TIMELINE                        │  ║
-║                      ║ │ Working Tree: 2 modified, 0 unmerged│ • 5085dfc (HEAD -> main) docs: operator guide  │  ║
-║                      ║ │ Commit Creator: [ Enter message... ]│ • 4d76deb feat: add dedicated workspace views  │  ║
-║                      ║ └─────────────────────────────────────┴────────────────────────────────────────────────┘  ║
-╠══════════════════════╬═══════════════════════════════════════════════════════════════════════════════════════════╣
-║ [6] System Settings  ║ ┌──────────────────────────────────────────────────────────────────────────────────────┐  ║
-║     (Configuration)  ║ │ AI PROVIDER CONFIG: [ Google Antigravity Native ] [ Claude ] [ OpenAI ] [ Ollama ]   │  ║
-║                      ║ │ • Target Project Root Path: d:\Projects\Multi Agent Setup                           │   ║
-║                      ║ │ • Max Swarm Concurrency: [ 2 Agents ] [ 4 Agents ] [ 8 Agents (Uncapped) ]           │  ║
-║                      ║ │ • Collision Arbitration Mode: [ Automatic 3-Way AST Merge ] [ Prompt Operator ]      │  ║
-║                      ║ └──────────────────────────────────────────────────────────────────────────────────────┘  ║
-╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
-```
+| View | Sidebar Tab | Core Capability | Visual Reference |
+|---|---|---|---|
+| **Mission Control** | `[1] Mission Ctrl` | Directive deck, SVG swarm topology canvas, live directive feed, telemetry dock | [Figure 1: Main HUD](#-system-overview--control-deck) |
+| **Swarm Roster** | `[2] Swarm Roster` | Expanded 5-agent fleet telemetry, sparklines, CPU/RAM allocation, modified files | [Figure 2: Agent Fleet](#-the-5-specialized-swarm-agents) |
+| **Task Pipeline** | `[3] Task Pipeline` | Multi-stage execution DAG, task status badges, concurrency multiplier | [Figure 8: Task Pipeline](#-autonomous-task-dag-pipeline-board) |
+| **Workspace Files** | `[4] Files & Diffs` | Full project tree, safe file modification tracking, unified diff inspector | [Figure 9: Diff Explorer](#-workspace-files-explorer--diff-inspector) |
+| **Git Operations** | `[5] Git Operations` | Branch sync, atomic commit creator, unstaged diff viewer, commit timeline | [Figure 10: Git Operations](#-integrated-git-version-control--commit-deck) |
+| **System Settings** | `[6] System Settings`| Model provider topology presets, concurrency limits, collision arbitration mode | [Figure 3: System Config](#-multi-model-topology--pricing-matrix) |
+
 
 ### ⚡ Autonomous Task DAG Pipeline Board
 
