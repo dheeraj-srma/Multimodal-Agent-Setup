@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Zap,
   Info,
+  ChevronDown,
 } from 'lucide-react';
 import { AgentId } from '../../types';
 import {
@@ -155,6 +156,7 @@ export const ModelConfigModal: React.FC<ModelConfigModalProps> = ({
                         </option>
                       ))}
                     </select>
+                    <ChevronDown size={13} className="mcm-dropdown-chevron" />
                   </div>
 
                   <div className="mcm-model-metrics-tag">

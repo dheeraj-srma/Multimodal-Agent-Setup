@@ -11,8 +11,8 @@
 }
 
 .mcm-modal-container {
-  width: 760px;
-  max-width: 95vw;
+  width: 900px;
+  max-width: 96vw;
   max-height: 90vh;
   background: rgba(10, 16, 28, 0.96);
   border: 1px solid rgba(0, 240, 255, 0.2);
@@ -180,12 +180,19 @@
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
-  padding: 8px 12px;
-  gap: 12px;
+  padding: 10px 14px;
+  gap: 16px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.mcm-role-row:hover {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .mcm-role-info {
-  flex: 1;
+  width: 200px;
+  flex-shrink: 0;
 }
 
 .mcm-role-title-row {
@@ -195,7 +202,7 @@
 }
 
 .mcm-role-name {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: #fff;
 }
@@ -210,33 +217,74 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.55);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
-  padding: 4px 8px;
-  width: 320px;
+  padding: 6px 30px 6px 10px;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.mcm-model-selector-wrapper:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
+}
+
+.mcm-selected-icon {
+  flex-shrink: 0;
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mcm-model-dropdown {
   flex: 1;
+  min-width: 0;
+  width: 100%;
   background: transparent;
   border: none;
   color: #fff;
   font-size: 11px;
   font-family: var(--font-mono, monospace);
+  font-weight: 500;
   outline: none;
   cursor: pointer;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 .mcm-model-dropdown option {
   background: #0b111c;
   color: #fff;
+  padding: 6px;
+}
+
+.mcm-dropdown-chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-dim, #64748b);
+  transition: color 0.2s ease;
+}
+
+.mcm-model-selector-wrapper:hover .mcm-dropdown-chevron {
+  color: #38bdf8;
 }
 
 .mcm-model-metrics-tag {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .mcm-meta-chip {
@@ -246,10 +294,12 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
-  padding: 3px 6px;
+  padding: 4px 8px;
   font-family: var(--font-mono, monospace);
-  font-size: 9px;
+  font-size: 9.5px;
   color: var(--text-secondary, #cbd5e1);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .mcm-notice-box {
