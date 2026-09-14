@@ -5,8 +5,7 @@
 ![Agent Command Center Banner](https://img.shields.io/badge/MISSION%20CONTROL-AI%20AGENT%20SWARM-00f0ff?style=for-the-badge&logo=satellite&logoColor=black)
 <br/>
 
-
-*A desktop mission-control interface for running, visualizing, and orchestrating multiple specialized AI coding and research agents concurrently.*
+_A desktop mission-control interface for running, visualizing, and orchestrating multiple specialized AI coding and research agents concurrently._
 
 [![React 18](https://img.shields.io/badge/React-18.3.1-61dafb?style=flat-square&logo=react&logoColor=black)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5.3-3178c6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -46,7 +45,6 @@ The **AI Agent Command Center (ACC)** is an enterprise-grade desktop environment
 <p align="center">
   <em>Figure 1: Full AI Agent Command Center (ACC) Mission Control interface featuring the Directive Deck, SVG Swarm Topology Canvas, Live Event Feed, and Real-Time Telemetry Dock.</em>
 </p>
-
 
 ```text
 ╔════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
@@ -185,6 +183,7 @@ graph TD
 ```
 
 ### Flow Characteristics
+
 - **Dynamic Particle Streams**: Data packets travel along connection splines **strictly while tasks are executing**. Streams remain idle and quiescent when nodes finish.
 - **Bi-Directional Spec Negotiation**: Design and Coder negotiate UI/backend contracts in real time before code commits.
 - **Midpoint Data Badges**: Readouts such as `12 KB/s`, `28 KB/s`, and `44 KB/s` dynamically calculate their spatial midpoints based on current node coordinates.
@@ -199,60 +198,60 @@ How a high-level developer prompt flows through autonomous decomposition, parall
 ┌─ STAGE 1: OPERATOR DIRECTIVE INGESTION ──────────────────────────────────────────────────────┐
 │  Prompt: "Refactor auth flow, audit WCAG contrast, benchmark AST parser, & add test suite"   │
 └──────────────────────────────────────────────┬───────────────────────────────────────────────┘
-                                               │                                                
-                                               ▼                                                
-                        ┌─ STAGE 2: DYNAMIC DAG PLANNING ───────────┐                           
-                        │  APEX ORCHESTRATOR (Gemini 1.5 Pro)       │                           
-                        │  • AST Goal Decomposition                 │                           
-                        │  • Dependency Graphing (DAG Engine)       │                           
-                        │  • Parallel Concurrency Scheduling        │                           
-                        └──────────────────────┬────────────────────┘                           
-                                               │                                                
-                        ┌──────────────────────┴────────────────────┐                           
-                        │       PARALLEL CONCURRENT DISPATCH        │                           
-                        ▼                                           ▼                           
+                                               │
+                                               ▼
+                        ┌─ STAGE 2: DYNAMIC DAG PLANNING ───────────┐
+                        │  APEX ORCHESTRATOR (Gemini 1.5 Pro)       │
+                        │  • AST Goal Decomposition                 │
+                        │  • Dependency Graphing (DAG Engine)       │
+                        │  • Parallel Concurrency Scheduling        │
+                        └──────────────────────┬────────────────────┘
+                                               │
+                        ┌──────────────────────┴────────────────────┐
+                        │       PARALLEL CONCURRENT DISPATCH        │
+                        ▼                                           ▼
 ┌─ STAGE 3A: DEEP RESEARCH ─────────────────┐      ┌─ STAGE 3B: DESIGN & UX SPEC ──────────────┐
 │  RESEARCH AGENT (Sonar Deep Research)     │      │  DESIGN AGENT (Claude 3.5 Sonnet)         │
 │  • Algorithmic benchmarks & complexity    │      │  • HSL design tokens & palette curves     │
-│  • Library API compatibility audits      │      │  • WCAG 2.1 AAA contrast specifications   │ 
+│  • Library API compatibility audits      │      │  • WCAG 2.1 AAA contrast specifications   │
 │  • 12 peer citations indexed into JSON    │      │  • Responsive UI wireframes & state specs │
 └─────────────────────┬─────────────────────┘      └─────────────────────┬─────────────────────┘
-                      │                                                  │                      
-                      │ Empirical Payload                                │ UI Specs & Contracts 
-                      │ (JSON Benchmarks)                                ▼                      
-                      │                    ┌─ STAGE 4: CONTRACT & CODE SYNTHESIS ───┐           
-                      │                    │  CODER & BACKEND AGENT (GPT-4o)        │           
-                      │    ⟲ 3 Cycles      │  • AST Code Transformation & Patches   │           
-                      │  Spec Negotiation  │  • Unified Multi-File Diffs Engine     │           
-                      │ ◄────────────────► │  • Atomic Workspace Source Mutation    │           
-                      │                    └─────────────────────┬──────────────────┘           
-                      │                                          │                              
-                      │                                          │ Source Diff Payload          
-                      ▼                                          ▼                              
+                      │                                                  │
+                      │ Empirical Payload                                │ UI Specs & Contracts
+                      │ (JSON Benchmarks)                                ▼
+                      │                    ┌─ STAGE 4: CONTRACT & CODE SYNTHESIS ───┐
+                      │                    │  CODER & BACKEND AGENT (GPT-4o)        │
+                      │    ⟲ 3 Cycles      │  • AST Code Transformation & Patches   │
+                      │  Spec Negotiation  │  • Unified Multi-File Diffs Engine     │
+                      │ ◄────────────────► │  • Atomic Workspace Source Mutation    │
+                      │                    └─────────────────────┬──────────────────┘
+                      │                                          │
+                      │                                          │ Source Diff Payload
+                      ▼                                          ▼
 ┌─ STAGE 5A: BENCHMARK VERIFICATION ────────┐      ┌─ STAGE 5B: TEST & QUALITY AUDIT ──────────┐
 │  EMPIRICAL BENCHMARK LOGS                 │      │  TEST & REVIEW AGENT (Llama 3.1 405B)     │
 │  • Latency & memory profile validation    │      │  • Automated WCAG 2.1 contrast audits     │
 │  • Complexity regression comparisons      │      │  • Unit & integration test runners        │
 │  • Citations synthesized into report      │      │  • 12/12 Verification tests passing       │
 └─────────────────────┬─────────────────────┘      └─────────────────────┬─────────────────────┘
-                      │                                                  │                      
-                      └───────────────────────┬──────────────────────────┘                      
-                                              │ Safe Diffs & Test Reports                       
-                                              ▼                                                 
-                        ┌─ STAGE 6: WORKSPACE SAFETY & CONFLICT GUARD ──┐                       
-                        │  WORKSPACESAFETY ENGINE                       │                       
-                        │  • Concurrent line-span conflict detection    │                       
-                        │  • AST token overlap arbitration (3-way)      │                       
-                        │  • Immutable path shields (.git, node_mods)   │                       
-                        └─────────────────────┬─────────────────────────┘                       
-                                              │ Verified Clean Hunks                            
-                                              ▼                                                 
-                        ┌─ STAGE 7: GIT PERSISTENCE & SYNTHESIS ────────┐                       
-                        │  LOCAL GIT ENGINE                             │                       
-                        │  • Atomic workspace commit staging            │                       
-                        │  • Git status tracking (Ahead 0, Behind 0)    │                       
-                        │  • Comprehensive markdown report (.md)        │                       
-                        └───────────────────────────────────────────────┘                       
+                      │                                                  │
+                      └───────────────────────┬──────────────────────────┘
+                                              │ Safe Diffs & Test Reports
+                                              ▼
+                        ┌─ STAGE 6: WORKSPACE SAFETY & CONFLICT GUARD ──┐
+                        │  WORKSPACESAFETY ENGINE                       │
+                        │  • Concurrent line-span conflict detection    │
+                        │  • AST token overlap arbitration (3-way)      │
+                        │  • Immutable path shields (.git, node_mods)   │
+                        └─────────────────────┬─────────────────────────┘
+                                              │ Verified Clean Hunks
+                                              ▼
+                        ┌─ STAGE 7: GIT PERSISTENCE & SYNTHESIS ────────┐
+                        │  LOCAL GIT ENGINE                             │
+                        │  • Atomic workspace commit staging            │
+                        │  • Git status tracking (Ahead 0, Behind 0)    │
+                        │  • Comprehensive markdown report (.md)        │
+                        └───────────────────────────────────────────────┘
 ```
 
 ### ⚡ Concurrency Benchmark: Sequential vs. ACC Swarm
@@ -287,13 +286,13 @@ How a high-level developer prompt flows through autonomous decomposition, parall
 
 Each agent has a tailored role, dedicated color identity, live resource metrics, and token tracking:
 
-| Agent | Tier | Role Identity | Default Model | Primary Objective |
-|---|---|---|---|---|
-| **🧠 Orchestrator** | **Apex** | `#38bdf8` (Cyan) | `Gemini 1.5 Pro` | Analyzes prompt, decomposes into a DAG, routes subtasks, resolves collisions, synthesizes final markdown report. |
-| **🎨 Design** | **Mid** | `#c084fc` (Purple) | `Claude 3.5 Sonnet` | Evaluates visual layout, creates design tokens, audits WCAG contrast, verifies typography and UX states. |
-| **💻 Coder** | **Mid** | `#34d399` (Emerald) | `GPT-4o` | Translates specifications into code, performs AST modifications, creates minimal diffs, resolves conflict hunks. |
-| **🔬 Research** | **Leaf** | `#fb923c` (Orange) | `Sonar Deep Research` | Investigates technical documentation, audits algorithmic complexity, checks library compatibilities, returns structured findings. |
-| **🧪 Tester** | **Leaf** | `#f43f5e` (Rose) | `Llama 3.1 405B` | Executes accessibility tests, measures performance regressions, checks code correctness, validates build artifacts. |
+| Agent               | Tier     | Role Identity       | Default Model         | Primary Objective                                                                                                                 |
+| ------------------- | -------- | ------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **🧠 Orchestrator** | **Apex** | `#38bdf8` (Cyan)    | `Gemini 1.5 Pro`      | Analyzes prompt, decomposes into a DAG, routes subtasks, resolves collisions, synthesizes final markdown report.                  |
+| **🎨 Design**       | **Mid**  | `#c084fc` (Purple)  | `Claude 3.5 Sonnet`   | Evaluates visual layout, creates design tokens, audits WCAG contrast, verifies typography and UX states.                          |
+| **💻 Coder**        | **Mid**  | `#34d399` (Emerald) | `GPT-4o`              | Translates specifications into code, performs AST modifications, creates minimal diffs, resolves conflict hunks.                  |
+| **🔬 Research**     | **Leaf** | `#fb923c` (Orange)  | `Sonar Deep Research` | Investigates technical documentation, audits algorithmic complexity, checks library compatibilities, returns structured findings. |
+| **🧪 Tester**       | **Leaf** | `#f43f5e` (Rose)    | `Llama 3.1 405B`      | Executes accessibility tests, measures performance regressions, checks code correctness, validates build artifacts.               |
 
 <p align="center">
   <img src="Screenshots/Agents.png" alt="Swarm Operational Roster - 5 Active Agents" width="100%" />
@@ -367,6 +366,7 @@ ACC supports running different models from different frontier providers simultan
 </p>
 
 ### Pre-Configured Topology Presets
+
 1. **Different Providers (Cross-Provider Swarm)**: Dispatches each agent to the best-in-class frontier model for its specific task.
 2. **Same Model (All Gemini Antigravity Native)**: Uses your native Google Antigravity subscription across all 5 agents with **$0.00 external API cost**.
 3. **Same Model (All Claude 3.5 Sonnet)**: High-reasoning uniform topology.
@@ -385,7 +385,6 @@ Clicking any agent card on the canvas opens the inspection menu as an anchored f
 <p align="center">
   <em>Figure 4: Anchored Side-by-Side Floating Inspector — dynamically positioned adjacent to the clicked agent node, featuring model assignment, resource telemetry, direct operator directive injection, and real-time activity stream.</em>
 </p>
-
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
@@ -448,6 +447,7 @@ Clicking any agent card on the canvas opens the inspection menu as an anchored f
 ```
 
 ### Dynamic Spatial Features
+
 - **Draggable Swarm Nodes**: Drag any agent card across the canvas. Dynamic cubic Bezier splines and data badges continuously recalculate their curves in real time.
 - **One-Click Auto Arrange**: Restores the default NASA pyramid hierarchy with smooth CSS transition easing.
 - **Side-by-Side Floating Pop-up Menu**:
@@ -462,6 +462,7 @@ Clicking any agent card on the canvas opens the inspection menu as an anchored f
 The collapsible and resizable bottom telemetry dock provides three dedicated operational tabs for deep swarm monitoring:
 
 #### 1. System Metrics & Live Oscilloscope
+
 <p align="center">
   <img src="Screenshots/Bottom%20Panel%20System%20Metrics.png" alt="Bottom Panel - System Metrics & Live Oscilloscope" width="100%" />
 </p>
@@ -470,6 +471,7 @@ The collapsible and resizable bottom telemetry dock provides three dedicated ope
 </p>
 
 #### 2. Live Event Log Stream & Telemetry Feed
+
 <p align="center">
   <img src="Screenshots/Bottom_Panel-Event%20Logs.png" alt="Bottom Panel - Event Logs Stream" width="100%" />
 </p>
@@ -478,6 +480,7 @@ The collapsible and resizable bottom telemetry dock provides three dedicated ope
 </p>
 
 #### 3. Workspace File Mutation & Conflict Watcher
+
 <p align="center">
   <img src="Screenshots/Bottom%20Panel-%20Files.png" alt="Bottom Panel - Files & Mutation Tracker" width="100%" />
 </p>
@@ -538,6 +541,7 @@ Switch between specialized operational dashboards with zero page reloads:
 ```
 
 ### 📁 Workspace Files Explorer & Diff Inspector
+
 <p align="center">
   <img src="Screenshots/Workspace.png" alt="Workspace Files Explorer and Diff Inspector" width="100%" />
 </p>
@@ -546,6 +550,7 @@ Switch between specialized operational dashboards with zero page reloads:
 </p>
 
 ### 🐙 Integrated Git Version Control & Commit Deck
+
 <p align="center">
   <img src="Screenshots/Github%20Controll.png" alt="Integrated Git Version Control and Commit Deck" width="100%" />
 </p>
@@ -558,7 +563,9 @@ Switch between specialized operational dashboards with zero page reloads:
 ## 🚀 Step-by-Step Operator Guide
 
 ### 1. Installation & Environment Setup
+
 Clone the repository and install dependencies:
+
 ```bash
 git clone https://github.com/dheeraj-srma/Multimodal-Agent-Setup.git
 cd "Multi Agent Setup"
@@ -566,25 +573,31 @@ npm install
 ```
 
 ### 2. Launching the Application
+
 You can run ACC in your browser or as a native desktop Electron app:
 
 #### Web Browser (Vite Dev Server)
+
 ```bash
 npm run dev
 ```
+
 Open your browser at `http://localhost:5173`.
 
 #### Native Desktop App (Electron)
+
 ```bash
 npm run desktop
 ```
+
 Launches a standalone desktop application with native windowing and IPC file-system access.
 
 ---
 
 ### 3. Launching Your First Autonomous Mission
+
 1. In the **Mission Directive Deck** at the top of the Mission Control view, type your mission prompt. Example:
-   > *"Refactor the authentication flow, audit accessibility contrast ratios, optimize component render cycles, and create unit tests."*
+   > _"Refactor the authentication flow, audit accessibility contrast ratios, optimize component render cycles, and create unit tests."_
 2. Click **RUN MISSION** (or press `Enter`).
 3. Watch the **Orchestrator** decompose the objective into subtasks.
 4. Independent stages (Design, Research, and Performance Audit) immediately launch in parallel.
@@ -593,6 +606,7 @@ Launches a standalone desktop application with native windowing and IPC file-sys
 ---
 
 ### 4. Interacting with Agents
+
 - **Drag & Arrange**: Drag agent cards around the canvas to reorganize the layout. Click **Auto Arrange** in the top right of the canvas to snap them back to their default pyramid.
 - **Inspect Agent**: Click any agent card (e.g. Design Agent). The floating pop-up menu will appear directly adjacent to the card.
 - **Live Model Swap**: In the floating menu, click the **ASSIGNED MODEL** dropdown to swap models mid-run (e.g., switch Coder from GPT-4o to Claude 3.5 Sonnet).
@@ -601,6 +615,7 @@ Launches a standalone desktop application with native windowing and IPC file-sys
 ---
 
 ### 5. Inspecting Changes and Committing
+
 1. In the left sidebar, click **Files**.
 2. Browse modified, added, and untracked files in the file tree on the left.
 3. Review the code changes in the unified diff inspector on the right.
@@ -723,6 +738,7 @@ npm run desktop
 ```
 
 ### Test Coverage Highlights
+
 - `Central EventBus`: Validates typed event delivery to subscribers.
 - `WorkspaceSafety & Collision Detection`: Tests line overlap detection and resolution modes.
 - `Parallelism Tracker`: Verifies real-time concurrency math calculation.
@@ -792,6 +808,6 @@ Distributed under the **MIT License**. See `LICENSE` for more information.
 
 **Built with Google Antigravity IDE • Google DeepMind Team**
 
-*Accelerate your development with autonomous, collaborative AI swarms.*
+_Accelerate your development with autonomous, collaborative AI swarms._
 
 </div>
