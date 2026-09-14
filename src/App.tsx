@@ -31,6 +31,12 @@ import { GitDiffModal } from './components/GitDiffViewer/GitDiffModal';
 import { MissionReportModal } from './components/MissionReportModal/MissionReportModal';
 import { SettingsModal } from './components/SettingsModal/SettingsModal';
 
+import { FilesView } from './components/Views/FilesView';
+import { GitView } from './components/Views/GitView';
+import { SettingsView } from './components/Views/SettingsView';
+import { TasksView } from './components/Views/TasksView';
+import { AgentsView } from './components/Views/AgentsView';
+
 import './styles/theme.css';
 import './styles/animations.css';
 import './App.css';
@@ -144,9 +150,6 @@ export const App: React.FC = () => {
   // Handle Sidebar Navigation
   const handleTabChange = (tab: 'mission' | 'agents' | 'tasks' | 'files' | 'git' | 'settings') => {
     setActiveTab(tab);
-    if (tab === 'files') setShowDiffModal(true);
-    if (tab === 'git') setShowGitModal(true);
-    if (tab === 'settings') setShowSettingsModal(true);
   };
 
   // Mission Launch Handler
@@ -295,69 +298,32 @@ export const App: React.FC = () => {
 
         {/* Center Scrollable Canvas */}
         <div className="acc-center-scroll-body">
-          {/* Mission Directive Deck */}
-          <MissionInput
-            onRunMission={handleLaunchMission}
-            isExecuting={mission?.status === 'RUNNING'}
-          />
-
-          {/* Hero: Multi-Agent Model Topology Graph with Hierarchy & Flow */}
-          <AgentGraph
-            statuses={agentStatuses}
-            selectedAgentId={selectedAgentId}
-            onSelectAgent={(id) => setSelectedAgentId(id)}
-            recentEvents={events}
-            topologyMode={topologyMode}
-            customAssignments={customAssignments}
-            onSelectTopologyMode={(mode) => setTopologyMode(mode)}
-            onOpenModelConfig={() => setShowModelConfig(true)}
-            onModelChange={handleModelChange}
-            onTogglePauseAgent={handleTogglePauseAgent}
-            onRetryAgent={handleRetryAgent}
-            onStopAgent={handleStopAgent}
-            onSendMessage={handleSendMessageToAgent}
-            mission={mission}
-          />
-
-          {/* Dynamic Views based on activeTab */}
-          {activeTab === 'agents' ? (
-            <div className="agent-cards-grid">
-              {(['orchestrator', 'design', 'coder', 'research', 'tester'] as const).map((agentId) => (
-                <AgentCard
-                  key={agentId}
-                  status={
-                    agentStatuses[agentId] || {
-                      agentId,
-                      role:
-                        agentId === 'orchestrator'
-                          ? 'Orchestrator Agent'
-                          : agentId === 'design'
-                          ? 'Design Agent'
-                          : agentId === 'coder'
-                          ? 'Coder Agent'
-                          : agentId === 'research'
-                          ? 'Research Agent'
-                          : 'Test / Review Agent',
-                      state: 'IDLE',
-                      progress: 0,
-                      filesTouchedCount: 0,
-                      messagesCount: 0,
-                      executionDurationMs: 0,
-                    }
-                  }
-                  recentLogs={events.filter((e) => e.agentId === agentId)}
-                  isSelected={selectedAgentId === agentId}
-                  onSelect={(id) => setSelectedAgentId(id)}
-                  onPause={handlePauseAgent}
-                  onResume={handleResumeAgent}
-                  onRetry={handleRetryAgent}
-                />
-              ))}
-            </div>
-          ) : activeTab === 'tasks' ? (
-            mission && <TaskGraphView tasks={mission.tasks} />
-          ) : (
+          {activeTab === 'mission' && (
             <>
+              {/* Mission Directive Deck */}
+              <MissionInput
+                onRunMission={handleLaunchMission}
+                isExecuting={mission?.status === 'RUNNING'}
+              />
+
+              {/* Hero: Multi-Agent Model Topology Graph with Hierarchy & Flow */}
+              <AgentGraph
+                statuses={agentStatuses}
+                selectedAgentId={selectedAgentId}
+                onSelectAgent={(id) => setSelectedAgentId(id)}
+                recentEvents={events}
+                topologyMode={topologyMode}
+                customAssignments={customAssignments}
+                onSelectTopologyMode={(mode) => setTopologyMode(mode)}
+                onOpenModelConfig={() => setShowModelConfig(true)}
+                onModelChange={handleModelChange}
+                onTogglePauseAgent={handleTogglePauseAgent}
+                onRetryAgent={handleRetryAgent}
+                onStopAgent={handleStopAgent}
+                onSendMessage={handleSendMessageToAgent}
+                mission={mission}
+              />
+
               {/* Default Mission Control View: Show DAG if active, plus compact cards */}
               {mission && mission.tasks.length > 0 && <TaskGraphView tasks={mission.tasks} />}
               <div className="agent-cards-grid">
@@ -392,6 +358,52 @@ export const App: React.FC = () => {
                 ))}
               </div>
             </>
+          )}
+
+          {activeTab === 'agents' && (
+            <AgentsView
+              statuses={agentStatuses}
+              events={events}
+              selectedAgentId={selectedAgentId}
+              onSelectAgent={(id) => setSelectedAgentId(id)}
+              onPauseAgent={handlePauseAgent}
+              onResumeAgent={handleResumeAgent}
+              onRetryAgent={handleRetryAgent}
+              onPauseAll={handlePauseAll}
+              onResumeAll={handleResumeAll}
+              onStopAll={handleStopAll}
+              topologyMode={topologyMode}
+              customAssignments={customAssignments}
+            />
+          )}
+
+          {activeTab === 'tasks' && (
+            <TasksView
+              mission={mission}
+              onLaunchMissionDirective={handleLaunchMission}
+            />
+          )}
+
+          {activeTab === 'files' && (
+            <FilesView
+              gitStatus={gitStatus}
+              diffText={diffText}
+              onRefresh={refreshGit}
+              onCommit={handleCommit}
+            />
+          )}
+
+          {activeTab === 'git' && (
+            <GitView
+              gitStatus={gitStatus}
+              diffText={diffText}
+              onRefresh={refreshGit}
+              onCommit={handleCommit}
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <SettingsView />
           )}
         </div>
 

@@ -1,0 +1,337 @@
+.git-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  animation: fade-in 0.2s ease;
+}
+
+.git-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(10, 16, 28, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 18px;
+}
+
+.gvh-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gvh-icon {
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+.gvh-title {
+  margin: 0;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.gvh-subtitle {
+  font-size: 11px;
+  color: var(--text-dim, #64748b);
+  display: block;
+  margin-top: 2px;
+}
+
+.gvh-refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gvh-refresh-btn:hover {
+  background: rgba(56, 189, 248, 0.18);
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+/* 4 Summary Cards Grid */
+.git-view-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1000px) {
+  .git-view-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.gvc-card {
+  background: rgba(8, 14, 26, 0.88);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gvc-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted, #94a3b8);
+}
+
+.gvc-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.gvc-sub {
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+  color: var(--text-dim, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Commit Box */
+.git-view-commit-box {
+  background: rgba(10, 16, 28, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gcb-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.06em;
+}
+
+.gcb-form {
+  display: flex;
+  gap: 8px;
+}
+
+.gcb-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 11.5px;
+  outline: none;
+}
+
+.gcb-input:focus {
+  border-color: #38bdf8;
+}
+
+.gcb-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #38bdf8;
+  color: #06090e;
+  border: none;
+  border-radius: 6px;
+  padding: 0 16px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.gcb-submit-btn:hover:not(:disabled) {
+  background: #7dd3fc;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+}
+
+.gcb-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.gcb-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid #10b981;
+  border-radius: 4px;
+  color: #34d399;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+}
+
+/* Two-column layout */
+.git-view-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  min-height: 400px;
+}
+
+@media (max-width: 1100px) {
+  .git-view-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.git-history-panel,
+.git-diff-panel {
+  background: rgba(8, 14, 26, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ghp-header,
+.gdp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.ghp-title,
+.gdp-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ghp-count {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: var(--text-dim, #64748b);
+}
+
+.gdp-toggle-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary, #cbd5e1);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.ghp-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+}
+
+.ghp-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim, #64748b);
+  font-family: var(--font-mono, monospace);
+}
+
+.ghp-commit-item {
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gci-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono, monospace);
+  font-size: 9.5px;
+}
+
+.gci-hash {
+  background: rgba(192, 132, 252, 0.15);
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  color: #c084fc;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.gci-author {
+  color: var(--text-muted, #94a3b8);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.gci-date {
+  color: var(--text-dim, #64748b);
+  margin-left: auto;
+}
+
+.gci-msg {
+  font-size: 11px;
+  color: #fff;
+  line-height: 1.4;
+}
+
+.gdp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  background: #06090e;
+  max-height: 420px;
+}
+
+.gdp-pre {
+  margin: 0;
+  font-family: 'Fira Code', var(--font-mono, monospace);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary, #cbd5e1);
+  white-space: pre-wrap;
+  word-break: break-all;
+}

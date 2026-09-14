@@ -49,9 +49,33 @@ This update refactors the agent inspection menu from a docked edge panel/drawer 
 
 ---
 
+## 4. Sidebar View Navigation & Dedicated Workspace Views
+
+Previously, clicking sidebar items like **Files**, **Git**, or **Settings** triggered modal dialogs while leaving the background in Mission Control. We have now upgraded the sidebar navigation to provide dedicated, full-screen workspace views for all 6 tabs:
+
+- **Mission Control (`mission`)**:
+  - Live Directive input, Multi-Agent Model Topology Graph (`AgentGraph`) with floating agent inspectors, DAG progress, and compact cards.
+- **Agents (`agents`)** ([AgentsView.tsx](file:///d:/Projects/Multi%20Agent%20Setup/src/components/Views/AgentsView.tsx)):
+  - Dedicated Swarm Roster dashboard displaying all 5 agents (`orchestrator`, `design`, `coder`, `research`, `tester`) with expanded operational telemetry, sparkline history, and global control actions (`Resume Swarm`, `Pause Swarm`, `Stop Swarm`).
+- **Tasks (`tasks`)** ([TasksView.tsx](file:///d:/Projects/Multi%20Agent%20Setup/src/components/Views/TasksView.tsx)):
+  - Dedicated Task Pipeline & DAG Board showing active task flows, dependencies, execution progress %, duration, and outputs.
+- **Files (`files`)** ([FilesView.tsx](file:///d:/Projects/Multi%20Agent%20Setup/src/components/Views/FilesView.tsx)):
+  - Full-featured **Workspace Files & Unified Diff Explorer**:
+    - Filterable file tree categorization (Modified, Added, Deleted, Untracked files).
+    - Unified diff inspector with copy button and syntax formatting.
+    - Inline commit deck to stage and commit changes directly.
+    - WorkspaceSafety guard status (.git, node_modules, package.json, .env protected).
+- **Git (`git`)** ([GitView.tsx](file:///d:/Projects/Multi%20Agent%20Setup/src/components/Views/GitView.tsx)):
+  - Version control dashboard showing active branch, Ahead/Behind tracking, change counters, commit history timeline, and commit creation form.
+- **Settings (`settings`)** ([SettingsView.tsx](file:///d:/Projects/Multi%20Agent%20Setup/src/components/Views/SettingsView.tsx)):
+  - Configuration panel for AI provider endpoints (Google Antigravity Native, Anthropic Claude, OpenAI, Local Ollama), workspace paths, concurrency limits, and safety rules.
+
+---
+
 ## Verification Results
 
 - **Unit Tests**: `npm test -- --run` passed with **12 / 12 passing**.
 - **Type Checking**: `npx tsc --noEmit` exited with code **0**.
 - **Production Build**: `npm run build` compiled cleanly into `dist/assets/`.
 - **Dev Server**: Running on `http://localhost:5173/` (HTTP 200 OK).
+
